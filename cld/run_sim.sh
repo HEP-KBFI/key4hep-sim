@@ -14,7 +14,7 @@ export NUM=$1 #random seed
 export SAMPLE=$2 #main card
 
 #Change these as needed
-export OUTDIR=/local/joosep/cld_edm4hep/key4hep_2025-05-29_CLD_b3b459/
+export OUTDIR=/local/joosep/cld_edm4hep/v1.2.1_key4hep_2025-05-29_CLD_02ff56/
 export SIMDIR=/home/joosep/key4hep-sim/cld/CLDConfig/CLDConfig
 export WORKDIR=/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}
 export FULLOUTDIR=${OUTDIR}/${SAMPLE}
@@ -24,7 +24,7 @@ mkdir -p $FULLOUTDIR
 mkdir -p $WORKDIR
 cd $WORKDIR
 
-cp $SIMDIR/${SAMPLE}.cmd card.cmd
+cp $SIMDIR/pythia/${SAMPLE}.cmd card.cmd
 cp $SIMDIR/pythia.py ./
 cp $SIMDIR/cld_steer.py ./
 cp -R $SIMDIR/PandoraSettingsCLD ./
