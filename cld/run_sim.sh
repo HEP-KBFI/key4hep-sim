@@ -9,7 +9,7 @@ set -x
 env
 df -h
 
-export NEV=500
+export NEV=100
 export NUM=$1 #random seed
 export SAMPLE=$2 #main card
 
@@ -25,10 +25,7 @@ mkdir -p $WORKDIR
 cd $WORKDIR
 
 cp $SIMDIR/pythia/${SAMPLE}.cmd card.cmd
-cp $SIMDIR/pythia.py ./
-cp $SIMDIR/CLDConfig/cld_steer.py ./
-cp -R $SIMDIR/CLDConfig/PandoraSettingsCLD ./
-cp -R $SIMDIR/CLDConfig/CLDReconstruction.py ./
+cp -R $SIMDIR ./
 
 echo "Random:seed=${NUM}" >> card.cmd
 cat card.cmd
@@ -38,16 +35,21 @@ echo "
 set -e
 source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2025-05-29
 env
-k4run pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
-ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml --steeringFile cld_steer.py
-k4run CLDReconstruction.py --inputFiles out_SIM.root --outputBasename out_RECO --num-events -1
+ls `pwd`/CLDConfig/CLDConfig
+k4run CLDConfig/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
+ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml --steeringFile CLDConfig/CLDConfig/cld_steer.py
+
+cd CLDConfig/CLDConfig
+k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
 " > sim.sh
 
 cat sim.sh
 
-singularity exec -B /cvmfs -B /scratch -B /local /home/software/singularity/alma9.simg bash sim.sh
+singularity exec -B /home/joosep -B /cvmfs -B /scratch -B /local --env PYTHONPATH=`pwd`/CLDConfig/CLDConfig /home/software/singularity/alma9.simg bash sim.sh
+
+ls *.root
 
 #Copy the outputs
-cp out_RECO_edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
+cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
 
 rm -Rf $WORKDIR
