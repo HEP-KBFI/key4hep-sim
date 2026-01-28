@@ -18,4 +18,4 @@ if __name__ == "__main__":
         for seed in range(seed0, seed1):
             #check if output file exists, and print out batch submission if it doesn't
             if not os.path.isfile(f"{outpath}/{sname}/root/reco_{sname}_{seed}.root"):
-                print("sbatch run_sim.sh {} {}".format(seed, sname)) 
+                print("sbatch run_sim_manual.sh {} {}".format(seed, sname)) 

@@ -9,14 +9,14 @@ set -x
 env
 df -h
 
-export NEV=${NEV:-100}
-export SAMPLE=$1 #main card
-export NUM=$2 #random seed
+export NEV=100
+export NUM=$1 #random seed
+export SAMPLE=$2 #main card
 
 #Change these as needed
-export OUTDIR=${OUTDIR:-/local/joosep/cld_edm4hep/v1.2.2_key4hep_2025-05-29_CLD_3edac3/}
-export CONFIG_DIR=${CONFIG_DIR:-/home/joosep/key4hep-sim/cld/CLDConfig}
-export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
+export OUTDIR=/local/joosep/cld_edm4hep/v1.2.1_key4hep_2025-05-29_CLD_02ff56/
+export SIMDIR=/home/joosep/key4hep-sim/cld/CLDConfig
+export WORKDIR=/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}
 export FULLOUTDIR=${OUTDIR}/${SAMPLE}
 
 mkdir -p $FULLOUTDIR
@@ -24,14 +24,12 @@ mkdir -p $FULLOUTDIR
 mkdir -p $WORKDIR
 cd $WORKDIR
 
-cp $CONFIG_DIR/pythia/${SAMPLE}.cmd card.cmd
-cp -R $CONFIG_DIR ./
+cp $SIMDIR/pythia/${SAMPLE}.cmd card.cmd
+cp -R $SIMDIR ./
 
-#add seed to pythia card
 echo "Random:seed=${NUM}" >> card.cmd
 cat card.cmd
 
-#prepare the gen-sim-reco script
 echo "
 #!/bin/bash
 set -e
@@ -47,9 +45,7 @@ k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_
 
 cat sim.sh
 
-#execute the gen-sim-reco step
-export PYTHONPATH=$(pwd)/CLDConfig/CLDConfig:$PYTHONPATH
-bash sim.sh
+singularity exec -B /home/joosep -B /cvmfs -B /scratch -B /local --env PYTHONPATH=`pwd`/CLDConfig/CLDConfig /home/software/singularity/alma9.simg bash sim.sh
 
 ls *.root
 
