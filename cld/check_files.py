@@ -8,6 +8,8 @@ samples = [
     ("p8_ee_ZZ_ecm365",         100000, 100010),
     ("p8_ee_ZZ_tautau_ecm365",  100000, 100010),
     ("p8_ee_ZH_Htautau_ecm240", 200000, 200010),
+    ("p8_ee_ttbar_ecm365",      300000, 300010),
+    ("p8_ee_WW_ecm365",         400000, 400010),
 ]
 
 if __name__ == "__main__":
