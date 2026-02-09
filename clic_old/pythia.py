@@ -1,7 +1,8 @@
 """
 Pythia8, integrated in the FCCSW framework.
+
 Generates according to a pythia .cmd file and saves them in fcc edm format.
-From https://github.com/HEP-FCC/FCCSW/blob/75537977077bf6b2e97341cdcd61773bc08b7da2/Examples/options/pythia.py#L24
+
 """
 
 import os
@@ -68,3 +69,5 @@ ApplicationMgr().TopAlg += [dumper]
 #out = PodioOutput("out")
 #out.filename = "out_pythia.root"
 #out.outputCommands = ["keep *"]
+
+

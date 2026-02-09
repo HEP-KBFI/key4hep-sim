@@ -1,35 +1,8 @@
-#
-# Copyright (c) 2019-2024 Key4hep-Project.
-#
-# This file is part of Key4hep.
-# See https://key4hep.github.io/key4hep-doc/ for further info.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+from Gaudi.Configuration import *
+from Gaudi.Configuration import WARNING, WARNING, INFO
 
-# Edited by Joosep Pata in 2024
-
-import os
-
-from Gaudi.Configuration import DEBUG, WARNING
-
-from Configurables import MarlinProcessorWrapper
-from k4MarlinWrapper.parseConstants import parseConstants
-
-from Configurables import Lcio2EDM4hepTool, EDM4hep2LcioTool
-from Configurables import k4DataSvc, PodioInput, PodioOutput, EventDataSvc
-
-from k4FWCore import ApplicationMgr, IOSvc
-from k4FWCore.parseArgs import parser
+from Configurables import LcioEvent, k4DataSvc, MarlinProcessorWrapper
+from k4MarlinWrapper.parseConstants import *
 
 algList = []
 
@@ -40,40 +13,56 @@ CONSTANTS = {
 
 parseConstants(CONSTANTS)
 
-parser.add_argument(
-    "--iosvc", action="store_true", default=False, help="Use IOSvc instead of PodioDataSvc"
-)
-parser.add_argument(
-    "--rec-output", default="Output_REC_e4h_input.slcio", help="Output file name for the REC file"
-)
-parser.add_argument(
-    "--dst-output", default="Output_DST_e4h_input.slcio", help="Output file name for the DST file"
-)
-parser.add_argument(
-    "--gaudi-output", default="my_output.root", help="Output file name for the Gaudi file"
-)
 
-args = parser.parse_known_args()[0]
+# For converters
+from Configurables import ToolSvc, Lcio2EDM4hepTool, EDM4hep2LcioTool
 
-if args.iosvc:
-    evtsvc = EventDataSvc("EventDataSvc")
-    iosvc = IOSvc()
-    iosvc.Input = os.path.join(
-        "$TEST_DIR/inputFiles/", os.environ.get("INPUTFILE", "ttbar_edm4hep_frame.root")
-    )
-    iosvc.Output = args.gaudi_output
-    iosvc.outputCommands = ["keep *", "drop RefinedVertexJets_PID_RefinedVertex"]
-else:
-    evtsvc = k4DataSvc("EventDataSvc")
-    evtsvc.input = os.path.join(
-        "$TEST_DIR/inputFiles/", os.environ.get("INPUTFILE", "ttbar_edm4hep_frame.root")
-    )
 
-    inp = PodioInput("InputReader")
-    inp.OutputLevel = DEBUG
+# read = LcioEvent()
+# read.OutputLevel = WARNING
+# read.Files = ["ttbar.slcio"]
+# algList.append(read)
 
-    out = PodioOutput("PodioOutput", filename=args.gaudi_output)
-    out.outputCommands = ["keep *", "drop RefinedVertexJets_PID_RefinedVertex"]
+
+from Configurables import k4DataSvc, PodioInput
+
+evtsvc = k4DataSvc("EventDataSvc")
+evtsvc.input = "$TEST_DIR/inputFiles/ttbar1_edm4hep.root"
+
+
+inp = PodioInput("InputReader")
+inp.collections = [
+    "EventHeader",
+    "MCParticles",
+    "VertexBarrelCollection",
+    "VertexEndcapCollection",
+    "InnerTrackerBarrelCollection",
+    "OuterTrackerBarrelCollection",
+    "InnerTrackerEndcapCollection",
+    "OuterTrackerEndcapCollection",
+    "ECalEndcapCollection",
+    "ECalEndcapCollectionContributions",
+    "ECalBarrelCollection",
+    "ECalBarrelCollectionContributions",
+    "ECalPlugCollection",
+    "ECalPlugCollectionContributions",
+    "HCalBarrelCollection",
+    "HCalBarrelCollectionContributions",
+    "HCalEndcapCollection",
+    "HCalEndcapCollectionContributions",
+    "HCalRingCollection",
+    "HCalRingCollectionContributions",
+    "YokeBarrelCollection",
+    "YokeBarrelCollectionContributions",
+    "YokeEndcapCollection",
+    "YokeEndcapCollectionContributions",
+    "LumiCalCollection",
+    "LumiCalCollectionContributions",
+    "BeamCalCollection",
+    "BeamCalCollectionContributions",
+]
+inp.OutputLevel = WARNING
+
 
 MyAIDAProcessor = MarlinProcessorWrapper("MyAIDAProcessor")
 MyAIDAProcessor.OutputLevel = WARNING
@@ -83,7 +72,7 @@ MyAIDAProcessor.Parameters = {"Compress": ["1"], "FileName": ["histograms"], "Fi
 # EDM4hep to LCIO converter
 edmConvTool = EDM4hep2LcioTool("EDM4hep2lcio")
 edmConvTool.convertAll = True
-edmConvTool.OutputLevel = DEBUG
+edmConvTool.OutputLevel = WARNING
 MyAIDAProcessor.EDM4hep2LcioTool = edmConvTool
 
 
@@ -91,7 +80,7 @@ InitDD4hep = MarlinProcessorWrapper("InitDD4hep")
 InitDD4hep.OutputLevel = WARNING
 InitDD4hep.ProcessorType = "InitializeDD4hep"
 InitDD4hep.Parameters = {
-    "DD4hepXMLFile": [os.environ["K4GEO"] + "/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml"],
+    "DD4hepXMLFile": [os.environ["LCGEO"] + "/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml"],
     "EncodingStringParameter": ["GlobalTrackerReadoutID"],
 }
 
@@ -143,7 +132,7 @@ VXDBarrelDigitiserLCIOConv.collNameMapping = {
     "VXDTrackerHits": "VXDTrackerHits",
     "VXDTrackerHitRelations": "VXDTrackerHitRelations",
 }
-VXDBarrelDigitiserLCIOConv.OutputLevel = DEBUG
+VXDBarrelDigitiserLCIOConv.OutputLevel = WARNING
 # Add it to VXDBarrelDigitiser Algorithm
 VXDBarrelDigitiser.Lcio2EDM4hepTool = VXDBarrelDigitiserLCIOConv
 
@@ -169,7 +158,7 @@ VXDEndcapDigitiserLCIOConv.collNameMapping = {
     "VXDEndcapTrackerHits": "VXDEndcapTrackerHits",
     "VXDEndcapTrackerHitRelations": "VXDEndcapTrackerHitRelations",
 }
-VXDEndcapDigitiserLCIOConv.OutputLevel = DEBUG
+VXDEndcapDigitiserLCIOConv.OutputLevel = WARNING
 # Add it to VXDEndcapDigitiser Algorithm
 VXDEndcapDigitiser.Lcio2EDM4hepTool = VXDEndcapDigitiserLCIOConv
 
@@ -195,7 +184,7 @@ InnerPlanarDigiProcessorLCIOConv.collNameMapping = {
     "ITrackerHits": "ITrackerHits",
     "InnerTrackerBarrelHitsRelations": "InnerTrackerBarrelHitsRelations",
 }
-InnerPlanarDigiProcessorLCIOConv.OutputLevel = DEBUG
+InnerPlanarDigiProcessorLCIOConv.OutputLevel = WARNING
 # Add it to InnerPlanarDigiProcessor Algorithm
 InnerPlanarDigiProcessor.Lcio2EDM4hepTool = InnerPlanarDigiProcessorLCIOConv
 
@@ -220,7 +209,7 @@ InnerEndcapPlanarDigiProcessorLCIOConv.collNameMapping = {
     "ITrackerEndcapHits": "ITrackerEndcapHits",
     "InnerTrackerEndcapHitsRelations": "InnerTrackerEndcapHitsRelations",
 }
-InnerEndcapPlanarDigiProcessorLCIOConv.OutputLevel = DEBUG
+InnerEndcapPlanarDigiProcessorLCIOConv.OutputLevel = WARNING
 # Add it to InnerEndcapPlanarDigiProcessor Algorithm
 InnerEndcapPlanarDigiProcessor.Lcio2EDM4hepTool = InnerEndcapPlanarDigiProcessorLCIOConv
 
@@ -245,7 +234,7 @@ OuterPlanarDigiProcessorLCIOConv.collNameMapping = {
     "OTrackerHits": "OTrackerHits",
     "OuterTrackerBarrelHitsRelations": "OuterTrackerBarrelHitsRelations",
 }
-OuterPlanarDigiProcessorLCIOConv.OutputLevel = DEBUG
+OuterPlanarDigiProcessorLCIOConv.OutputLevel = WARNING
 # Add it to OuterPlanarDigiProcessor Algorithm
 OuterPlanarDigiProcessor.Lcio2EDM4hepTool = OuterPlanarDigiProcessorLCIOConv
 
@@ -270,7 +259,7 @@ OuterEndcapPlanarDigiProcessorLCIOConv.collNameMapping = {
     "OTrackerEndcapHits": "OTrackerEndcapHits",
     "OuterTrackerEndcapHitsRelations": "OuterTrackerEndcapHitsRelations",
 }
-OuterEndcapPlanarDigiProcessorLCIOConv.OutputLevel = DEBUG
+OuterEndcapPlanarDigiProcessorLCIOConv.OutputLevel = WARNING
 # Add it to OuterEndcapPlanarDigiProcessor Algorithm
 OuterEndcapPlanarDigiProcessor.Lcio2EDM4hepTool = OuterEndcapPlanarDigiProcessorLCIOConv
 
@@ -320,7 +309,7 @@ MyConformalTracking.Parameters = {
         "InnerTrackerEndcapHitsRelations",
         "OuterTrackerEndcapHitsRelations",
     ],
-    "RetryTooManyTracks": ["false"],
+    "RetryTooManyTracks": ["true"],
     "SiTrackCollectionName": ["SiTracksCT"],
     "SortTreeResults": ["true"],
     "Steps": [
@@ -535,7 +524,7 @@ MyConformalTracking.Parameters = {
         "BuildNewTracks",
     ],
     "ThetaRange": ["0.05"],
-    "TooManyTracks": ["100000"],
+    "TooManyTracks": ["400000"],
     "TrackerHitCollectionNames": [
         "VXDTrackerHits",
         "VXDEndcapTrackerHits",
@@ -554,7 +543,7 @@ MyConformalTrackingLCIOConv.collNameMapping = {
     "DebugHits": "DebugHits",
     "SiTracksCT": "SiTracksCT",
 }
-MyConformalTrackingLCIOConv.OutputLevel = DEBUG
+MyConformalTrackingLCIOConv.OutputLevel = WARNING
 # Add it to MyConformalTracking Algorithm
 MyConformalTracking.Lcio2EDM4hepTool = MyConformalTrackingLCIOConv
 
@@ -579,7 +568,7 @@ ClonesAndSplitTracksFinder.Parameters = {
 ClonesAndSplitTracksFinderLCIOConv = Lcio2EDM4hepTool("ClonesAndSplitTracksFinderLCIOConv")
 ClonesAndSplitTracksFinderLCIOConv.convertAll = False
 ClonesAndSplitTracksFinderLCIOConv.collNameMapping = {"SiTracks": "SiTracks"}
-ClonesAndSplitTracksFinderLCIOConv.OutputLevel = DEBUG
+ClonesAndSplitTracksFinderLCIOConv.OutputLevel = WARNING
 # Add it to ClonesAndSplitTracksFinder Algorithm
 ClonesAndSplitTracksFinder.Lcio2EDM4hepTool = ClonesAndSplitTracksFinderLCIOConv
 
@@ -604,7 +593,7 @@ Refit.Parameters = {
 RefitLCIOConv = Lcio2EDM4hepTool("Refit")
 RefitLCIOConv.convertAll = False
 RefitLCIOConv.collNameMapping = {"SiTracks_Refitted": "SiTracks_Refitted"}
-RefitLCIOConv.OutputLevel = DEBUG
+RefitLCIOConv.OutputLevel = WARNING
 # Add it to RefitLCIOConv Algorithm
 Refit.Lcio2EDM4hepTool = RefitLCIOConv
 
@@ -644,7 +633,7 @@ MyClicEfficiencyCalculator.Parameters = {
 MyClicEfficiencyCalculatorLCIOConv = Lcio2EDM4hepTool("MyClicEfficiencyCalculator")
 MyClicEfficiencyCalculatorLCIOConv.convertAll = False
 MyClicEfficiencyCalculatorLCIOConv.collNameMapping = {"MCParticleNotReco": "MCParticleNotReco"}
-MyClicEfficiencyCalculatorLCIOConv.OutputLevel = DEBUG
+MyClicEfficiencyCalculatorLCIOConv.OutputLevel = WARNING
 # Add it to MyClicEfficiencyCalculatorLCIOConv Algorithm
 MyClicEfficiencyCalculator.Lcio2EDM4hepTool = MyClicEfficiencyCalculatorLCIOConv
 
@@ -760,7 +749,7 @@ MyDDCaloDigiLCIOConv.collNameMapping = {
     "HCALOther": "HCALOther",
     "RelationCaloHit": "RelationCaloHit",
 }
-MyDDCaloDigiLCIOConv.OutputLevel = DEBUG
+MyDDCaloDigiLCIOConv.OutputLevel = WARNING
 # Add it to MyDDCaloDigi Algorithm
 MyDDCaloDigi.Lcio2EDM4hepTool = MyDDCaloDigiLCIOConv
 
@@ -900,7 +889,7 @@ MyDDMarlinPandoraLCIOConv.collNameMapping = {
     "PandoraPFOs": "PandoraPFOs",
     "PandoraStartVertices": "PandoraStartVertices",
 }
-MyDDMarlinPandoraLCIOConv.OutputLevel = DEBUG
+MyDDMarlinPandoraLCIOConv.OutputLevel = WARNING
 # Add it to MyDDMarlinPandora Algorithm
 MyDDMarlinPandora.Lcio2EDM4hepTool = MyDDMarlinPandoraLCIOConv
 
@@ -920,7 +909,7 @@ MyDDSimpleMuonDigi.Parameters = {
 MyDDSimpleMuonDigiLCIOConv = Lcio2EDM4hepTool("MyDDSimpleMuonDigiLCIOConv")
 MyDDSimpleMuonDigiLCIOConv.convertAll = False
 MyDDSimpleMuonDigiLCIOConv.collNameMapping = {"MUON": "MUON", "RelationMuonHit": "RelationMuonHit"}
-MyDDSimpleMuonDigiLCIOConv.OutputLevel = DEBUG
+MyDDSimpleMuonDigiLCIOConv.OutputLevel = WARNING
 # Add it to MyDDSimpleMuonDigi Algorithm
 MyDDSimpleMuonDigi.Lcio2EDM4hepTool = MyDDSimpleMuonDigiLCIOConv
 
@@ -989,7 +978,7 @@ MyRecoMCTruthLinkerLCIOConv.collNameMapping = {
     "RecoMCTruthLink": "RecoMCTruthLink",
     "SiTracksMCTruthLink": "SiTracksMCTruthLink",
 }
-MyRecoMCTruthLinkerLCIOConv.OutputLevel = DEBUG
+MyRecoMCTruthLinkerLCIOConv.OutputLevel = WARNING
 # Add it to MyRecoMCTruthLinker Algorithm
 MyRecoMCTruthLinker.Lcio2EDM4hepTool = MyRecoMCTruthLinkerLCIOConv
 
@@ -1034,7 +1023,7 @@ LumiCalReco_Obs.Parameters = {
 }
 
 LumiCalReco = MarlinProcessorWrapper("LumiCalReco")
-LumiCalReco.OutputLevel = DEBUG
+LumiCalReco.OutputLevel = WARNING
 LumiCalReco.ProcessorType = "BeamCalClusterReco"
 LumiCalReco.Parameters = {
     "BackgroundMethod": ["Empty"],
@@ -1073,7 +1062,7 @@ LumiCalRecoLCIOConv.collNameMapping = {
     "LumiCalClusters": "LumiCalClusters",
     "LumiCalRecoParticles": "LumiCalRecoParticles",
 }
-LumiCalRecoLCIOConv.OutputLevel = DEBUG
+LumiCalRecoLCIOConv.OutputLevel = WARNING
 # Add it to LumiCalReco Algorithm
 LumiCalReco.Lcio2EDM4hepTool = LumiCalRecoLCIOConv
 
@@ -1093,7 +1082,7 @@ RenameCollectionLCIOConv.convertAll = False
 RenameCollectionLCIOConv.collNameMapping = {
     "PFOsFromJets": "PFOsFromJets",
 }
-RenameCollectionLCIOConv.OutputLevel = DEBUG
+RenameCollectionLCIOConv.OutputLevel = WARNING
 # Add it to RenameCollection Algorithm
 RenameCollection.Lcio2EDM4hepTool = RenameCollectionLCIOConv
 
@@ -1111,159 +1100,8 @@ MyFastJetProcessor.Parameters = {
     "storeParticlesInJets": ["true"],
 }
 
-JetClusteringAndRefiner = MarlinProcessorWrapper("JetClusteringAndRefiner")
-JetClusteringAndRefiner.OutputLevel = WARNING
-JetClusteringAndRefiner.ProcessorType = "LcfiplusProcessor"
-JetClusteringAndRefiner.Parameters = {
-    "Algorithms": ["JetClustering", "JetVertexRefiner"],
-    "JetClustering.AlphaParameter": ["1.0"],
-    "JetClustering.BetaParameter": ["1.0"],
-    "JetClustering.GammaParameter": ["1.0"],
-    "JetClustering.InputVertexCollectionName": ["BuildUpVertices"],
-    "JetClustering.JetAlgorithm": ["ValenciaVertex"],
-    "JetClustering.MaxNumberOfJetsForYThreshold": ["10"],
-    "JetClustering.MuonIDExternal": ["0"],
-    "JetClustering.MuonIDMaximum3DImpactParameter": ["5.0"],
-    "JetClustering.MuonIDMinimumD0Significance": ["5.0"],
-    "JetClustering.MuonIDMinimumEnergy": ["0"],
-    "JetClustering.MuonIDMinimumProbability": ["0.5"],
-    "JetClustering.MuonIDMinimumZ0Significance": ["5.0"],
-    "JetClustering.NJetsRequested": ["2"],
-    "JetClustering.OutputJetCollectionName": ["VertexJets"],
-    "JetClustering.OutputJetStoresVertex": ["0"],
-    "JetClustering.PrimaryVertexCollectionName": ["PrimaryVertices"],
-    "JetClustering.RParameter": ["1.0"],
-    "JetClustering.UseBeamJets": ["1"],
-    "JetClustering.UseMuonID": ["1"],
-    "JetClustering.VertexSelectionK0MassWidth": ["0.02"],
-    "JetClustering.VertexSelectionMaximumDistance": ["30."],
-    "JetClustering.VertexSelectionMinimumDistance": ["0.3"],
-    "JetClustering.YAddedForJetLeptonLepton": ["100"],
-    "JetClustering.YAddedForJetLeptonVertex": ["100"],
-    "JetClustering.YAddedForJetVertexLepton": ["0"],
-    "JetClustering.YAddedForJetVertexVertex": ["100"],
-    "JetClustering.YCut": ["0."],
-    "JetVertexRefiner.BNessCut": ["-0.80"],
-    "JetVertexRefiner.BNessCutE1": ["-0.15"],
-    "JetVertexRefiner.InputJetCollectionName": ["VertexJets"],
-    "JetVertexRefiner.InputVertexCollectionName": ["BuildUpVertices"],
-    "JetVertexRefiner.MaxAngleSingle": ["0.5"],
-    "JetVertexRefiner.MaxCharmFlightLengthPerJetEnergy": ["0.1"],
-    "JetVertexRefiner.MaxPosSingle": ["30."],
-    "JetVertexRefiner.MaxSeparationPerPosSingle": ["0.1"],
-    "JetVertexRefiner.MinEnergySingle": ["1."],
-    "JetVertexRefiner.MinPosSingle": ["0.3"],
-    "JetVertexRefiner.OneVertexProbThreshold": ["0.001"],
-    "JetVertexRefiner.OutputJetCollectionName": ["RefinedVertexJets"],
-    "JetVertexRefiner.OutputVertexCollectionName": ["RefinedVertices"],
-    "JetVertexRefiner.PrimaryVertexCollectionName": ["PrimaryVertices"],
-    "JetVertexRefiner.V0VertexCollectionName": ["BuildUpVertices_V0"],
-    "JetVertexRefiner.mind0sigSingle": ["5."],
-    "JetVertexRefiner.minz0sigSingle": ["5."],
-    "JetVertexRefiner.useBNess": ["0"],
-    "MCPCollection": ["MCParticle"],
-    "MCPFORelation": ["RecoMCTruthLink"],
-    "MagneticField": ["4.0"],
-    "PFOCollection": ["PFOsFromJets"],
-    "PrintEventNumber": ["1"],
-    "ReadSubdetectorEnergies": ["0"],
-    "TrackHitOrdering": ["2"],
-    "UpdateVertexRPDaughters": ["0"],
-    "UseMCP": ["0"],
-}
-# LCIO to EDM4hep
-JetClusteringAndRefinerLCIOConv = Lcio2EDM4hepTool("JetClusteringAndRefinerLCIOConv")
-JetClusteringAndRefinerLCIOConv.convertAll = False
-JetClusteringAndRefinerLCIOConv.collNameMapping = {
-    "VertexJets": "VertexJets",
-    "RefinedVertexJets": "RefinedVertexJets",
-    "RefinedVertices": "RefinedVertices",
-}
-JetClusteringAndRefinerLCIOConv.OutputLevel = DEBUG
-# Add it to JetClusteringAndRefiner Algorithm
-JetClusteringAndRefiner.Lcio2EDM4hepTool = JetClusteringAndRefinerLCIOConv
-
-
-Output_REC = MarlinProcessorWrapper("Output_REC")
-Output_REC.OutputLevel = WARNING
-Output_REC.ProcessorType = "LCIOOutputProcessor"
-Output_REC.Parameters = {
-    "DropCollectionNames": [],
-    "DropCollectionTypes": [],
-    "FullSubsetCollections": ["EfficientMCParticles", "InefficientMCParticles"],
-    "KeepCollectionNames": [],
-    "LCIOOutputFile": [args.rec_output],
-    "LCIOWriteMode": ["WRITE_NEW"],
-}
-
-Output_DST = MarlinProcessorWrapper("Output_DST")
-Output_DST.OutputLevel = WARNING
-Output_DST.ProcessorType = "LCIOOutputProcessor"
-Output_DST.Parameters = {
-    "DropCollectionNames": [],
-    "DropCollectionTypes": [
-        "MCParticle",
-        "LCRelation",
-        "SimCalorimeterHit",
-        "CalorimeterHit",
-        "SimTrackerHit",
-        "TrackerHit",
-        "TrackerHitPlane",
-        "Track",
-        "ReconstructedParticle",
-        "LCFloatVec",
-        "Clusters",
-    ],
-    "FullSubsetCollections": [
-        "EfficientMCParticles",
-        "InefficientMCParticles",
-        "MCPhysicsParticles",
-    ],
-    "KeepCollectionNames": [
-        "MCParticlesSkimmed",
-        "MCPhysicsParticles",
-        "RecoMCTruthLink",
-        "SiTracks",
-        "SiTracks_Refitted",
-        "PandoraClusters",
-        "PandoraPFOs",
-        "SelectedPandoraPFOs",
-        "LooseSelectedPandoraPFOs",
-        "TightSelectedPandoraPFOs",
-        "LE_SelectedPandoraPFOs",
-        "LE_LooseSelectedPandoraPFOs",
-        "LE_TightSelectedPandoraPFOs",
-        "LumiCalClusters",
-        "LumiCalRecoParticles",
-        "BeamCalClusters",
-        "BeamCalRecoParticles",
-        "MergedRecoParticles",
-        "MergedClusters",
-        "RefinedVertexJets",
-        "RefinedVertexJets_rel",
-        "RefinedVertexJets_vtx",
-        "RefinedVertexJets_vtx_RP",
-        "BuildUpVertices",
-        "BuildUpVertices_res",
-        "BuildUpVertices_RP",
-        "BuildUpVertices_res_RP",
-        "BuildUpVertices_V0",
-        "BuildUpVertices_V0_res",
-        "BuildUpVertices_V0_RP",
-        "BuildUpVertices_V0_res_RP",
-        "PrimaryVertices",
-        "PrimaryVertices_res",
-        "PrimaryVertices_RP",
-        "PrimaryVertices_res_RP",
-        "RefinedVertices",
-        "RefinedVertices_RP",
-    ],
-    "LCIOOutputFile": [args.dst_output],
-    "LCIOWriteMode": ["WRITE_NEW"],
-}
-
 OverlayFalse = MarlinProcessorWrapper("OverlayFalse")
-OverlayFalse.OutputLevel = DEBUG
+OverlayFalse.OutputLevel = WARNING
 OverlayFalse.ProcessorType = "OverlayTimingGeneric"
 OverlayFalse.Parameters = {
     "BackgroundFileNames": [],
@@ -1315,7 +1153,7 @@ OverlayFalse.Parameters = {
 OverlayFalseLCIOConv = Lcio2EDM4hepTool("OverlayFalseLCIOConv")
 OverlayFalseLCIOConv.convertAll = False
 OverlayFalseLCIOConv.collNameMapping = {"MCPhysicsParticles": "MCPhysicsParticles"}
-OverlayFalseLCIOConv.OutputLevel = DEBUG
+OverlayFalseLCIOConv.OutputLevel = WARNING
 # Add it to OverlayFalse Algorithm
 OverlayFalse.Lcio2EDM4hepTool = OverlayFalseLCIOConv
 
@@ -1883,7 +1721,7 @@ MergeRP.Parameters = {
 MergeRPLCIOConv = Lcio2EDM4hepTool("MergeRPLCIOConv")
 MergeRPLCIOConv.convertAll = False
 MergeRPLCIOConv.collNameMapping = {"MergedRecoParticles": "MergedRecoParticles"}
-MergeRPLCIOConv.OutputLevel = DEBUG
+MergeRPLCIOConv.OutputLevel = WARNING
 # Add it to MergeRP Algorithm
 MergeRP.Lcio2EDM4hepTool = MergeRPLCIOConv
 
@@ -1901,7 +1739,7 @@ MergeClusters.Parameters = {
 MergeClustersLCIOConv = Lcio2EDM4hepTool("MergeClustersLCIOConv")
 MergeClustersLCIOConv.convertAll = False
 MergeClustersLCIOConv.collNameMapping = {"MergedClusters": "MergedClusters"}
-MergeClustersLCIOConv.OutputLevel = DEBUG
+MergeClustersLCIOConv.OutputLevel = WARNING
 # Add it to MergeClusters Algorithm
 MergeClusters.Lcio2EDM4hepTool = MergeClustersLCIOConv
 
@@ -2020,7 +1858,7 @@ CLICPfoSelectorDefault_HE.Parameters = {
 CLICPfoSelectorDefault_HELCIOConv = Lcio2EDM4hepTool("CLICPfoSelectorDefault_HELCIOConv")
 CLICPfoSelectorDefault_HELCIOConv.convertAll = False
 CLICPfoSelectorDefault_HELCIOConv.collNameMapping = {"SelectedPandoraPFOs": "SelectedPandoraPFOs"}
-CLICPfoSelectorDefault_HELCIOConv.OutputLevel = DEBUG
+CLICPfoSelectorDefault_HELCIOConv.OutputLevel = WARNING
 # Add it to CLICPfoSelectorDefault_HE Algorithm
 CLICPfoSelectorDefault_HE.Lcio2EDM4hepTool = CLICPfoSelectorDefault_HELCIOConv
 
@@ -2078,10 +1916,8 @@ CLICPfoSelectorLoose_HE.Parameters = {
 # LCIO to EDM4hep
 CLICPfoSelectorLoose_HELCIOConv = Lcio2EDM4hepTool("CLICPfoSelectorLoose_HELCIOConv")
 CLICPfoSelectorLoose_HELCIOConv.convertAll = False
-CLICPfoSelectorLoose_HELCIOConv.collNameMapping = {
-    "CLICPfoSelectorLoose_HE": "CLICPfoSelectorLoose_HE"
-}
-CLICPfoSelectorLoose_HELCIOConv.OutputLevel = DEBUG
+CLICPfoSelectorLoose_HELCIOConv.collNameMapping = {"CLICPfoSelectorLoose_HE": "CLICPfoSelectorLoose_HE"}
+CLICPfoSelectorLoose_HELCIOConv.OutputLevel = WARNING
 # Add it to CLICPfoSelectorLoose_HE Algorithm
 CLICPfoSelectorLoose_HE.Lcio2EDM4hepTool = CLICPfoSelectorLoose_HELCIOConv
 
@@ -2139,10 +1975,8 @@ CLICPfoSelectorTight_HE.Parameters = {
 # LCIO to EDM4hep
 CLICPfoSelectorTight_HELCIOConv = Lcio2EDM4hepTool("CLICPfoSelectorTight_HELCIOConv")
 CLICPfoSelectorTight_HELCIOConv.convertAll = False
-CLICPfoSelectorTight_HELCIOConv.collNameMapping = {
-    "TightSelectedPandoraPFOs": "TightSelectedPandoraPFOs"
-}
-CLICPfoSelectorTight_HELCIOConv.OutputLevel = DEBUG
+CLICPfoSelectorTight_HELCIOConv.collNameMapping = {"TightSelectedPandoraPFOs": "TightSelectedPandoraPFOs"}
+CLICPfoSelectorTight_HELCIOConv.OutputLevel = WARNING
 # Add it to CLICPfoSelectorTight_HE Algorithm
 CLICPfoSelectorTight_HE.Lcio2EDM4hepTool = CLICPfoSelectorTight_HELCIOConv
 
@@ -2200,10 +2034,8 @@ CLICPfoSelectorDefault_LE.Parameters = {
 # LCIO to EDM4hep
 CLICPfoSelectorDefault_LELCIOConv = Lcio2EDM4hepTool("CLICPfoSelectorDefault_LELCIOConv")
 CLICPfoSelectorDefault_LELCIOConv.convertAll = False
-CLICPfoSelectorDefault_LELCIOConv.collNameMapping = {
-    "LE_SelectedPandoraPFOs": "LE_SelectedPandoraPFOs"
-}
-CLICPfoSelectorDefault_LELCIOConv.OutputLevel = DEBUG
+CLICPfoSelectorDefault_LELCIOConv.collNameMapping = {"LE_SelectedPandoraPFOs": "LE_SelectedPandoraPFOs"}
+CLICPfoSelectorDefault_LELCIOConv.OutputLevel = WARNING
 # Add it to CLICPfoSelectorDefault_LE Algorithm
 CLICPfoSelectorDefault_LE.Lcio2EDM4hepTool = CLICPfoSelectorDefault_LELCIOConv
 
@@ -2261,10 +2093,8 @@ CLICPfoSelectorLoose_LE.Parameters = {
 # LCIO to EDM4hep
 CLICPfoSelectorLoose_LELCIOConv = Lcio2EDM4hepTool("CLICPfoSelectorLoose_LELCIOConv")
 CLICPfoSelectorLoose_LELCIOConv.convertAll = False
-CLICPfoSelectorLoose_LELCIOConv.collNameMapping = {
-    "LE_LooseSelectedPandoraPFOs": "LE_LooseSelectedPandoraPFOs"
-}
-CLICPfoSelectorLoose_LELCIOConv.OutputLevel = DEBUG
+CLICPfoSelectorLoose_LELCIOConv.collNameMapping = {"LE_LooseSelectedPandoraPFOs": "LE_LooseSelectedPandoraPFOs"}
+CLICPfoSelectorLoose_LELCIOConv.OutputLevel = WARNING
 # Add it to CLICPfoSelectorLoose_LE Algorithm
 CLICPfoSelectorLoose_LE.Lcio2EDM4hepTool = CLICPfoSelectorLoose_LELCIOConv
 
@@ -2322,10 +2152,8 @@ CLICPfoSelectorTight_LE.Parameters = {
 # LCIO to EDM4hep
 CLICPfoSelectorTight_LELCIOConv = Lcio2EDM4hepTool("CLICPfoSelectorTight_LELCIOConv")
 CLICPfoSelectorTight_LELCIOConv.convertAll = False
-CLICPfoSelectorTight_LELCIOConv.collNameMapping = {
-    "LE_TightSelectedPandoraPFOs": "LE_TightSelectedPandoraPFOs"
-}
-CLICPfoSelectorTight_LELCIOConv.OutputLevel = DEBUG
+CLICPfoSelectorTight_LELCIOConv.collNameMapping = {"LE_TightSelectedPandoraPFOs": "LE_TightSelectedPandoraPFOs"}
+CLICPfoSelectorTight_LELCIOConv.OutputLevel = WARNING
 # Add it to CLICPfoSelectorTight_LE Algorithm
 CLICPfoSelectorTight_LE.Lcio2EDM4hepTool = CLICPfoSelectorTight_LELCIOConv
 
@@ -2390,11 +2218,8 @@ VertexFinderLCIOConv.collNameMapping = {
     "BuildUpVertices_V0": "BuildUpVertices_V0",
     "BuildUpVertices": "BuildUpVertices",
     "PrimaryVertices": "PrimaryVertices",
-    "BuildUpVertices_RP": "BuildUpVertices_RP",
-    "BuildUpVertices_V0_RP": "BuildUpVertices_V0_RP",
-    "PrimaryVertices_RP": "PrimaryVertices_RP",
 }
-VertexFinderLCIOConv.OutputLevel = DEBUG
+VertexFinderLCIOConv.OutputLevel = WARNING
 # Add it to VertexFinder Algorithm
 VertexFinder.Lcio2EDM4hepTool = VertexFinderLCIOConv
 
@@ -2453,6 +2278,35 @@ VertexFinderUnconstrained.Parameters = {
     "UseMCP": ["0"],
 }
 
+
+# Write output to EDM4hep
+from Configurables import PodioOutput
+
+out = PodioOutput("PodioOutput", filename="my_output.root")
+out.outputCommands = ["keep *"]
+out.OutputLevel = INFO
+out.outputCommands = [
+    "drop *",
+    "keep MCParticles*",
+    "keep Pandora*",
+    "keep SiTracks*",
+    "keep *MCTruthLink*",
+    "keep *Clusters*",
+    "keep *RecoParticles*",
+    "keep *MUON*",
+    "keep *ECALBarrel*",
+    "keep *ECALEndcap*",
+    "keep *ECALOther*",
+    "keep *HCALBarrel*",
+    "keep *HCALEndcap*",
+    "keep *HCALOther*",
+    "keep *TrackerHit*",
+    "keep *Vertices*",
+    "drop LumiCal*",
+]
+
+
+algList.append(inp)
 algList.append(MyAIDAProcessor)
 algList.append(EventNumber)
 algList.append(InitDD4hep)
@@ -2498,12 +2352,12 @@ algList.append(CLICPfoSelectorTight_LE)
 algList.append(RenameCollection)  # Config.OverlayFalse
 # # algList.append(MyFastJetProcessor)  # Config.OverlayNotFalse
 algList.append(VertexFinder)
-algList.append(JetClusteringAndRefiner)
+# algList.append(JetClusteringAndRefiner)
 # # algList.append(VertexFinderUnconstrained)  # Config.VertexUnconstrainedON
-algList.append(Output_REC)
-algList.append(Output_DST)
+# algList.append(Output_REC)
+# algList.append(Output_DST)
+algList.append(out)
 
-if not args.iosvc:
-    algList = [inp] + algList + [out]
+from Configurables import ApplicationMgr
 
 ApplicationMgr(TopAlg=algList, EvtSel="NONE", EvtMax=3, ExtSvc=[evtsvc], OutputLevel=WARNING)

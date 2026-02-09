@@ -1,3 +1,6 @@
 [submodule "cld/CLDConfig"]
 	path = cld/CLDConfig
 	url = https://github.com/jpata/CLDConfig
+[submodule "clic/CLICPerformance"]
+	path = clic/CLICPerformance
+	url = https://github.com/iLCSoft/CLICPerformance

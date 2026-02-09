@@ -9,52 +9,57 @@ set -x
 env
 df -h
 
-NEV=100
-NUM=$1 #random seed
-SAMPLE=$2 #main card
+export NEV=${NEV:-100}
+export SAMPLE=$1 #main card
+export NUM=$2 #random seed
 
 #Change these as needed
-OUTDIR=/local/joosep/clic_edm4hep/2024_07/
-SIMDIR=/home/joosep/key4hep-sim/clic/
-WORKDIR=/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}
-FULLOUTDIR=${OUTDIR}/${SAMPLE}
+export OUTDIR=${OUTDIR:-/local/joosep/cld_edm4hep/v1.2.2_key4hep_2025-05-29_CLD_3edac3/}
+export CONFIG_DIR=${CONFIG_DIR:-/home/joosep/particleflow/mlpf/data/key4hep/gen/clic}
+export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
+export FULLOUTDIR=${OUTDIR}/${SAMPLE}
 
 mkdir -p $FULLOUTDIR
 
 mkdir -p $WORKDIR
+
+# Ensure cleanup on exit, even if the job fails
+cleanup() {
+    if [ ! -z "$WORKDIR" ] && [ "$WORKDIR" != "/scratch/local/$USER" ] && [ "$WORKDIR" != "/scratch/local/$USER/" ]; then
+        echo "Cleaning up scratch directory $WORKDIR"
+        rm -Rf $WORKDIR
+    fi
+}
+trap cleanup EXIT
+
 cd $WORKDIR
 
-cp $SIMDIR/${SAMPLE}.cmd card.cmd
-cp $SIMDIR/pythia.py ./
-cp $SIMDIR/clic_steer.py ./
-cp -R $SIMDIR/PandoraSettings ./
-cp -R $SIMDIR/clicRec_e4h_input.py ./
+cp $CONFIG_DIR/pythia/${SAMPLE}.cmd card.cmd
+cp -R $CONFIG_DIR ./
 
+#add seed to pythia card
 echo "Random:seed=${NUM}" >> card.cmd
 cat card.cmd
 
-#Use a tagged version of Key4HEP
-source /cvmfs/sw.hsf.org/spackages7/key4hep-stack/2023-04-08/x86_64-centos7-gcc11.2.0-opt/urwcv/setup.sh
+#prepare the gen-sim-reco script
+echo "
+#!/bin/bash
+set -e
+source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2025-05-29
+env
+ls `pwd`
+k4run ./pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
+ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
+k4run clicRec_e4h_input.py --inputFiles out_SIM.root --outputBasename out_RECO --num-events -1
+" > sim.sh
 
-#Run generation
-k4run $SIMDIR/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
+cat sim.sh
 
-#Run simulation
-ddsim --compactFile $LCGEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml \
-      --outputFile out_sim_edm4hep.root \
-      --steeringFile clic_steer.py \
-      --inputFiles out.hepmc \
-      --numberOfEvents $NEV \
-      --random.seed $NUM
+#execute the gen-sim-reco step
+export PYTHONPATH=$(pwd)/CLDConfig/CLDConfig:$PYTHONPATH
+bash sim.sh
 
-#Run reconstruction
-k4run clicRec_e4h_input.py -n $NEV --EventDataSvc.input out_sim_edm4hep.root --PodioOutput.filename out_reco_edm4hep.root
+ls *.root
 
 #Copy the outputs
-cp out_reco_edm4hep.root reco_${SAMPLE}_${NUM}.root
-cp out.hepmc sim_${SAMPLE}_${NUM}.hepmc
-cp reco_${SAMPLE}_${NUM}.root $FULLOUTDIR/root/
-bzip2 sim_${SAMPLE}_${NUM}.hepmc
-cp sim_${SAMPLE}_${NUM}.hepmc.bz2 $FULLOUTDIR/sim/
-
-rm -Rf $WORKDIR
+cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
