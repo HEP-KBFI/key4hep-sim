@@ -56,10 +56,10 @@ k4run clicRec_e4h_input.py --inputFiles out_SIM.root --outputBasename out_RECO -
 cat sim.sh
 
 #execute the gen-sim-reco step
-export PYTHONPATH=$(pwd)/CLDConfig/CLDConfig:$PYTHONPATH
+export PYTHONPATH=$(pwd)/CLICPerformance:$PYTHONPATH
 bash sim.sh
 
 ls *.root
 
 #Copy the outputs
-cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
+cp out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
