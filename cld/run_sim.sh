@@ -22,6 +22,16 @@ export FULLOUTDIR=${OUTDIR}/${SAMPLE}
 mkdir -p $FULLOUTDIR
 
 mkdir -p $WORKDIR
+
+# Ensure cleanup on exit, even if the job fails
+cleanup() {
+    if [ ! -z "$WORKDIR" ] && [ "$WORKDIR" != "/scratch/local/$USER" ] && [ "$WORKDIR" != "/scratch/local/$USER/" ]; then
+        echo "Cleaning up scratch directory $WORKDIR"
+        rm -Rf $WORKDIR
+    fi
+}
+trap cleanup EXIT
+
 cd $WORKDIR
 
 cp $CONFIG_DIR/pythia/${SAMPLE}.cmd card.cmd
@@ -55,5 +65,3 @@ ls *.root
 
 #Copy the outputs
 cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
-
-rm -Rf $WORKDIR
