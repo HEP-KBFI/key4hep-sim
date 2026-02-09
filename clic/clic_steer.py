@@ -1,3 +1,6 @@
+#Adapted from https://github.com/iLCSoft/CLICPerformance/blob/8a92e8c6964af6f5ba9f0ed9a687afc298d8cc02/clicConfig/clic_steer.py#L4
+#Apache 2.0 License, copyright iLCSoft/CLICPerformance authors, edited by Joosep Pata in 2024
+
 import os
 
 from DDSim.DD4hepSimulation import DD4hepSimulation

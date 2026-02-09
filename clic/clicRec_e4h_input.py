@@ -1,3 +1,6 @@
+#Adapted from https://github.com/key4hep/k4MarlinWrapper/blob/951f98620fdec1b0511f6a59307d57e1638f3299/test/gaudi_opts/clicRec_e4h_input.py
+#Apache 2.0 License, copyright key4hep/k4MarlinWrapper authors, edited by Joosep Pata in 2024
+
 from Gaudi.Configuration import *
 from Gaudi.Configuration import WARNING, WARNING, INFO
 
