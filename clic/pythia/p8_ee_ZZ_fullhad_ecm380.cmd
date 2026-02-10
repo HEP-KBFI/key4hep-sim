@@ -22,9 +22,11 @@ Beams:sigmaVertexX = 2.73e-2   !  27.3 mum
 Beams:sigmaVertexY = 48.8E-6   !  48.8 nm
 Beams:sigmaVertexZ = 1.33      !  1.33 mm
 
-! 3) Hard process : ZH at 240 GeV
-Beams:eCM = 240  ! CM energy of collision
-HiggsSM:ffbar2HZ = on
+! 3) Hard process : ZZ at 380 GeV
+Beams:eCM = 380  ! CM energy of collision
+WeakDoubleBoson:ffbar2gmZgmZ = on
+23:onMode   = off
+23:onIfAny = 1 2 3 4 5 6
 
 ! 4) Settings for the event generation process in the Pythia8 library.
 PartonLevel:ISR = on               ! no initial-state radiation
@@ -33,7 +35,3 @@ PartonLevel:FSR = on               ! no final-state radiation
 ParticleDecays:limitCylinder = on
 ParticleDecays:xyMax = 2250.
 ParticleDecays:zMax = 2500.
-
-25:m0        = 125.0               ! Higgs mass
-25:onMode    = off
-25:onIfAny   = 15

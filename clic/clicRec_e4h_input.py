@@ -50,6 +50,9 @@ parser.add_argument(
     "--dst-output", default="Output_DST_e4h_input.slcio", help="Output file name for the DST file"
 )
 parser.add_argument(
+    "--gaudi-input", default="input.root", help="Input file name for Gaudi"
+)
+parser.add_argument(
     "--gaudi-output", default="my_output.root", help="Output file name for the Gaudi file"
 )
 
@@ -65,9 +68,7 @@ if args.iosvc:
     iosvc.outputCommands = ["keep *", "drop RefinedVertexJets_PID_RefinedVertex"]
 else:
     evtsvc = k4DataSvc("EventDataSvc")
-    evtsvc.input = os.path.join(
-        "$TEST_DIR/inputFiles/", os.environ.get("INPUTFILE", "ttbar_edm4hep_frame.root")
-    )
+    evtsvc.input = args.gaudi_input
 
     inp = PodioInput("InputReader")
     inp.OutputLevel = DEBUG

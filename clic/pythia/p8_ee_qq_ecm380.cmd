@@ -22,11 +22,13 @@ Beams:sigmaVertexX = 2.73e-2   !  27.3 mum
 Beams:sigmaVertexY = 48.8E-6   !  48.8 nm
 Beams:sigmaVertexZ = 1.33      !  1.33 mm
 
-! 3) Hard process : WW at 365 GeV
-Beams:eCM = 365  ! CM energy of collision
-WeakDoubleBoson:ffbar2WW = on
-24:onMode   = off
-24:onIfAny = 1 2 3 4 5 6
+! 3) Hard process : ttbar at 380 GeV
+Beams:eCM = 380  ! CM energy of collision
+WeakSingleBoson:ffbar2ffbar(s:gmZ) = on
+23:onMode   = off
+23:onIfAny = 1 2 3 4 5 6
+22:onMode = off
+22:onIfAny = 1 2 3 4 5 6
 
 ! 4) Settings for the event generation process in the Pythia8 library.
 PartonLevel:ISR = on               ! no initial-state radiation

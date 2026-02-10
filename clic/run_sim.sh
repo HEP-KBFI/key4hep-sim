@@ -48,9 +48,10 @@ set -e
 source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2025-05-29
 env
 ls `pwd`
-k4run ./pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
+k4run ./clic/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
 ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
-k4run clicRec_e4h_input.py --inputFiles out_SIM.root --outputBasename out_RECO --num-events -1
+cd clic/CLICPerformance/clicConfig
+k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1
 " > sim.sh
 
 cat sim.sh
@@ -62,4 +63,4 @@ bash sim.sh
 ls *.root
 
 #Copy the outputs
-cp out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
+cp out_RECO.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
