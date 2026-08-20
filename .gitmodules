@@ -4,3 +4,6 @@
 [submodule "clic/CLICPerformance"]
 	path = clic/CLICPerformance
 	url = https://github.com/iLCSoft/CLICPerformance
+[submodule "idea/FCC-config"]
+	path = idea/FCC-config
+	url = https://github.com/HEP-FCC/FCC-config.git
