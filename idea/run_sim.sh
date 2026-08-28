@@ -12,6 +12,8 @@ SAMPLE=${1:?Usage: run_sim.sh PROCESS_NAME RANDOM_SEED}
 NUM=${2:?Usage: run_sim.sh PROCESS_NAME RANDOM_SEED}
 OUTDIR=${OUTDIR:?OUTDIR must point at the production gen directory}
 CONFIG_DIR=${CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
+LOCAL_K4RECCALORIMETER=${LOCAL_K4RECCALORIMETER:-${CONFIG_DIR}/k4RecCalorimeter-local}
+LOCAL_K4GEO=${LOCAL_K4GEO:-${CONFIG_DIR}/k4geo-local}
 WORKDIR=${WORKDIR:-/scratch/local/${USER}/${SAMPLE}_${SLURM_JOB_ID:-manual}}
 FULLOUTDIR=${OUTDIR}/${SAMPLE}/root
 LOGDIR=${LOGDIR:-${WORKDIR}/logs}
@@ -70,12 +72,45 @@ run_with_progress() {
 
 cd "${WORKDIR}"
 
-if [[ -z "${KEY4HEP_STACK:-}" ]]; then
+# KEY4HEP_STACK can remain set in a partial or stale shell environment even
+# when required helpers such as k4_local_repo are unavailable. Test the actual
+# commands used by this workflow and source the pinned release when needed.
+if ! command -v k4_local_repo >/dev/null 2>&1 || \
+   ! command -v k4run >/dev/null 2>&1 || \
+   ! command -v ddsim >/dev/null 2>&1; then
     # Key4HEP's setup script probes optional unset variables and is not
-    # compatible with nounset.
+    # compatible with nounset. Clear a stale stack marker as the setup script
+    # otherwise assumes initialization has already completed.
     set +u
+    unset KEY4HEP_STACK
     source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2026-04-08
     set -u
+fi
+
+# Load the local k4geo Geant4 plugin before simulation. It preserves detected
+# Cherenkov-photon counts by charged parent in SimCalorimeterHit contributions.
+if [[ -d "${LOCAL_K4GEO}/install-local" ]]; then
+    previous_dir=${PWD}
+    cd "${LOCAL_K4GEO}"
+    k4_local_repo install-local
+    cd "${previous_dir}"
+else
+    echo "Missing local k4geo installation: ${LOCAL_K4GEO}/install-local" >&2
+    echo "Build it with ${CONFIG_DIR}/build_k4geo.sh" >&2
+    exit 1
+fi
+
+# Prefer the locally patched k4RecCalorimeter. Entering its source directory is
+# required because k4_local_repo resolves the install path relative to $PWD.
+if [[ -d "${LOCAL_K4RECCALORIMETER}/install-local" ]]; then
+    previous_dir=${PWD}
+    cd "${LOCAL_K4RECCALORIMETER}"
+    k4_local_repo install-local
+    cd "${previous_dir}"
+else
+    echo "Missing local k4RecCalorimeter installation: ${LOCAL_K4RECCALORIMETER}/install-local" >&2
+    echo "Build it with ${CONFIG_DIR}/build_k4reccalorimeter.sh" >&2
+    exit 1
 fi
 
 DDSIM_ARGS=(
