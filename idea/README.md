@@ -15,9 +15,10 @@ pixi run -m configs/tallinn/pixi.toml gen_idea
 To restrict or batch the Snakemake jobs, set the same variables accepted by
 the generic `gen` task, for example `BATCH=1/10` or `CORES=4`.
 
-The `gun_e_10gev` sample is a one-event, 10 GeV electron-gun validation. Any
-process name beginning with `gun_` selects the DD4hep particle gun instead of
-Pythia. For local tests, its settings can be overridden with
+The `gun_e_10gev`, `gun_mu_10gev`, and `gun_pi_10gev` samples select 10 GeV
+electron, negative-muon, and negative-pion guns, respectively. Any process
+name beginning with `gun_` selects the DD4hep particle gun instead of Pythia.
+For local tests, its settings can be overridden with
 `GUN_PARTICLE`, `GUN_ENERGY`, and `GUN_DISTRIBUTION`:
 
 ```bash

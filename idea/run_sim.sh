@@ -5,7 +5,7 @@ set -x
 
 NEV=${NEV:-100}
 PROGRESS_INTERVAL=${PROGRESS_INTERVAL:-9999999}
-GUN_PARTICLE=${GUN_PARTICLE:-e-}
+GUN_PARTICLE=${GUN_PARTICLE:-}
 GUN_ENERGY=${GUN_ENERGY:-10*GeV}
 GUN_DISTRIBUTION=${GUN_DISTRIBUTION:-uniform}
 SAMPLE=${1:?Usage: run_sim.sh PROCESS_NAME RANDOM_SEED}
@@ -122,6 +122,13 @@ DDSIM_ARGS=(
 )
 
 if [[ "${SAMPLE}" == gun_* ]]; then
+    if [[ -z "${GUN_PARTICLE}" ]]; then
+        case "${SAMPLE}" in
+            gun_mu_*) GUN_PARTICLE=mu- ;;
+            gun_pi_*) GUN_PARTICLE=pi- ;;
+            *) GUN_PARTICLE=e- ;;
+        esac
+    fi
     DDSIM_ARGS+=(
         --enableGun
         --gun.distribution "${GUN_DISTRIBUTION}"
