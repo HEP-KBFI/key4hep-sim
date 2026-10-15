@@ -21,7 +21,7 @@ ApplicationMgr().ExtSvc += [podioevent]
 
 # The vertex smearing is added on top of the card's smearing.
 # The numbers here are only as an example and are off by orders of magnitude
-# for the actual CLD:
+# for the actual CLIC:
 
 # from Configurables import GaussSmearVertex
 # smeartool = GaussSmearVertex()
