@@ -19,12 +19,16 @@ from Configurables import k4DataSvc
 podioevent = k4DataSvc("EventDataSvc")
 ApplicationMgr().ExtSvc += [podioevent]
 
-from Configurables import GaussSmearVertex
-smeartool = GaussSmearVertex()
-smeartool.xVertexSigma =   0.5*units.mm
-smeartool.yVertexSigma =   0.5*units.mm
-smeartool.zVertexSigma =  40.0*units.mm
-smeartool.tVertexSigma = 180.0*units.picosecond
+# The vertex smearing is added on top of the card's smearing.
+# The numbers here are only as an example and are off by orders of magnitude
+# for the actual CLIC:
+
+# from Configurables import GaussSmearVertex
+# smeartool = GaussSmearVertex()
+# smeartool.xVertexSigma =   0.5*units.mm
+# smeartool.yVertexSigma =   0.5*units.mm
+# smeartool.zVertexSigma =  40.0*units.mm
+# smeartool.tVertexSigma = 180.0*units.picosecond
 
 from Configurables import PythiaInterface
 pythia8gentool = PythiaInterface()
@@ -37,7 +41,9 @@ pythia8gentool.printPythiaStatistics = True
 from Configurables import GenAlg
 pythia8gen = GenAlg("Pythia8")
 pythia8gen.SignalProvider = pythia8gentool
-pythia8gen.VertexSmearingTool = smeartool
+# This is how one would use the defined vertex smearing.
+# As we dont want any additional noise on top, this is now commented out:
+# pythia8gen.VertexSmearingTool = smeartool
 pythia8gen.hepmc.Path = "hepmc"
 ApplicationMgr().TopAlg += [pythia8gen]
 
