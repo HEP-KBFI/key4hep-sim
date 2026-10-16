@@ -14,7 +14,7 @@ export SAMPLE=$1 #main card
 export NUM=$2 #random seed
 
 #Change these as needed
-export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/key4hep_2026-04-08_CLIC_o3_v14/}
+export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/v1.3.0_key4hep_2026-04-08/}
 export CONFIG_DIR=${CONFIG_DIR:-/home/joosep/particleflow/mlpf/data/key4hep/gen/clic}
 export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
 export FULLOUTDIR=${OUTDIR}/${SAMPLE}
