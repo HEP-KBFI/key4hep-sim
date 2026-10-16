@@ -4,3 +4,12 @@
 [submodule "clic/CLICPerformance"]
 	path = clic/CLICPerformance
 	url = https://github.com/iLCSoft/CLICPerformance
+[submodule "idea/FCC-config"]
+	path = idea/FCC-config
+	url = https://github.com/HEP-KBFI/FCC-config.git
+[submodule "idea/k4geo-local"]
+	path = idea/k4geo-local
+	url = https://github.com/HEP-KBFI/k4geo.git
+[submodule "idea/k4RecCalorimeter-local"]
+	path = idea/k4RecCalorimeter-local
+	url = https://github.com/HEP-KBFI/k4RecCalorimeter.git
