@@ -17,3 +17,4 @@
 [submodule "generators/bhwide"]
 	path = generators/bhwide
 	url = https://github.com/ktht/bhwide.git
+	branch = master-cli
