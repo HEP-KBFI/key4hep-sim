@@ -69,9 +69,12 @@ apptainer exec --bind /cvmfs,"$PWD",/tmp \
 
 The runner produces upstream GGTF/GenFit `FittedTracks` and
 `FittedTracksWithFilteredHits`, alongside `TracksFromGenParticles` and its truth
-association. **The existing MLPF postprocessor still consumes the truth-seeded
-collection.** Fitted-track supervision and reader support remain separate work;
-the oracle `ycand` remains a pipeline check, not a physics baseline.
+association. **MLPF postprocessing defaults to quality-selected `FittedTracks`.** Tracker-hit
+simulation links provide training labels at 75% majority purity, without
+replacing measured kinematics. Invalid fits are removed using reconstructed
+quality; low-purity tracks and secondaries remain inputs without a primary
+representative label. The oracle `ycand` remains a pipeline check, not a physics
+baseline.
 
 Set `ENABLE_GGTF=false` for a proxy-only diagnostic run. `TRACKING_MODEL` can
 point to a cached GGTF ONNX file; otherwise upstream downloads its default
@@ -99,11 +102,10 @@ The generated `.sif` is ignored by Git and must be built on a fresh checkout. Fi
 `${OUTDIR}/${process}/root/reco_${process}_${seed}.root`.
 
 The new `particleflow_spec.yaml` production workspace is
-`IDEA_o1_v03_upstream_20261116`, with TFDS version **0.3.0**. Regenerate simulation,
-reconstruction, Parquet and TFDS; do not relabel old files. Existing 0.2.1 data
-belongs to the previous campaign. The updated geometry/materials/field and
-proxy-track selection change the distribution even though the tensor schema
-and truth-seeded provenance remain compatible.
+`IDEA_o1_v03_upstream_20261116_fitted`, with TFDS version **0.4.0**. Reuse updated
+ROOT files if they contain `FittedTracks` and tracker truth links; regenerate
+Parquet/TFDS in the new workspace. The published 0.2.1 data and the 0.3.0 recipe
+use proxy tracks and must not be relabelled as fitted data.
 
 ## Check the local truth patch
 
@@ -131,7 +133,7 @@ channel/cluster/cell energy closure and cluster truth-weight closure with
 `tests/check_reco.py /tmp/idea-smoke/output/gun_e_10gev/root/reco_gun_e_10gev_424242.root`
 in the same IDEA environment. Use `--proxy-only` if GGTF was disabled.
 
-## Local validation (16 November 2026)
+## Upstream-update validation (16 November 2026, before the fitted reader)
 
 - All three C++ packages built and installed in the GCC 16 nightly view.
 - One 365 GeV ttbar event generated to HepMC3 with the local Pythia steering.
@@ -150,7 +152,49 @@ in the same IDEA environment. Use `--proxy-only` if GGTF was disabled.
 **Tracking limitation:** the upstream model at its default thresholds returned
 zero GGTF candidates for this electron event. GenFit was configured and ran,
 but had no tracks to fit. This validates execution and the proxy-track data
-path, not realistic tracking or PF performance. `check_reco.py` always reports
+path as it existed in 0.3.0, not realistic tracking or PF performance. Current
+0.4.0 postprocessing uses only fitted inputs, so an event with no fitted tracks
+has an empty track input. `check_reco.py` always reports
 track counts; pass `--require-fitted-tracks` when testing an event expected to
 exercise the fitter. Validate the model and thresholds on representative
 particle guns and 365 GeV jets before adopting fitted tracks for training.
+
+## Use fitted tracks for MLPF
+
+Existing updated ROOT files can be postprocessed directly:
+
+```bash
+uv run python mlpf/data/key4hep/postprocessing.py \
+  --detector idea --idea-track-source fitted \
+  --input /path/to/reco.root --outpath /path/to/new-fitted-parquet
+```
+
+This reads `FittedTracks`, selects its unique IP state, and requires finite
+parameters, nonnegative chi2, positive NDF and associated hits. The inputs do
+not use `TracksFromGenParticles` or the truth-parametrized dN/dx collection.
+`FittedTracks` retains original measurement references, allowing hit-truth
+matching; the filtered-hit output instead contains fitted-hit clones without
+corresponding original sim-hit links.
+
+Input selection has no truth cuts. MC information is used only for labels:
+one direct charged status-1 particle must own at least 75% of distinct track
+measurements. Unlinked measurements count against purity. Tracks matched to
+secondaries do not acquire an ancestor's charge or momentum. Duplicate primary
+matches choose one representative by purity, hit count and fit quality; input
+order and measured parameters are preserved.
+
+The postprocessor records source, collection, quality/truth policies and
+raw/rejected/matched track counts in Parquet. The 0.4.0 TFDS builder validates
+this provenance and rejects legacy or mixed inputs. The preparation helper
+also preserves provenance instead of relabelling proxy data.
+
+The three-event ttbar validation retained 47 of 50 stored fitted tracks
+(21/11/15), with 40 direct primary labels (18/10/12). ROOT-to-Parquet, finite
+MLPF tensors, and an actual 0.4.0 ArrayRecord TFDS build/read passed. Fitting
+outliers remain in the accepted measured inputs; tracking performance still
+needs validation, and ycand remains a target oracle. No new simulation is
+required for this postprocessing change if updated ROOT inputs are available.
+
+`ENABLE_GGTF=false` is now suitable only for explicit legacy proxy diagnostics;
+postprocessing such outputs requires `--idea-track-source truth_seeded` and
+legacy builders/loader overrides. The fitted path never falls back implicitly.
