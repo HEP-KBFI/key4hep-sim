@@ -1,0 +1,7 @@
+Bootstrap: docker
+From: gitlab-registry.cern.ch/key4hep/k4-deploy/alma9:latest
+
+%post
+    # The runtime image lacks headers needed by the current Geant4 CMake config.
+    dnf install -y expat-devel motif-devel libXmu-devel libXi-devel lz4-devel libzstd-devel snappy-devel libicu
+    dnf clean all

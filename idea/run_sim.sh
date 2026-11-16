@@ -8,13 +8,16 @@ PROGRESS_INTERVAL=${PROGRESS_INTERVAL:-9999999}
 GUN_PARTICLE=${GUN_PARTICLE:-}
 GUN_ENERGY=${GUN_ENERGY:-10*GeV}
 GUN_DISTRIBUTION=${GUN_DISTRIBUTION:-uniform}
+ENABLE_GGTF=${ENABLE_GGTF:-true}
 SAMPLE=${1:?Usage: run_sim.sh PROCESS_NAME RANDOM_SEED}
 NUM=${2:?Usage: run_sim.sh PROCESS_NAME RANDOM_SEED}
 OUTDIR=${OUTDIR:?OUTDIR must point at the production gen directory}
 CONFIG_DIR=${CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 LOCAL_K4RECCALORIMETER=${LOCAL_K4RECCALORIMETER:-${CONFIG_DIR}/k4RecCalorimeter-local}
 LOCAL_K4GEO=${LOCAL_K4GEO:-${CONFIG_DIR}/k4geo-local}
+LOCAL_K4RECTRACKER=${LOCAL_K4RECTRACKER:-${CONFIG_DIR}/k4RecTracker-local}
 WORKDIR=${WORKDIR:-/scratch/local/${USER}/${SAMPLE}_${SLURM_JOB_ID:-manual}}
+TRACKING_MODEL=${TRACKING_MODEL:-${WORKDIR}/SimpleGatrIDEAv3o1.onnx}
 FULLOUTDIR=${OUTDIR}/${SAMPLE}/root
 LOGDIR=${LOGDIR:-${WORKDIR}/logs}
 
@@ -72,46 +75,20 @@ run_with_progress() {
 
 cd "${WORKDIR}"
 
-# KEY4HEP_STACK can remain set in a partial or stale shell environment even
-# when required helpers such as k4_local_repo are unavailable. Test the actual
-# commands used by this workflow and source the pinned release when needed.
-if ! command -v k4_local_repo >/dev/null 2>&1 || \
-   ! command -v k4run >/dev/null 2>&1 || \
-   ! command -v ddsim >/dev/null 2>&1; then
-    # Key4HEP's setup script probes optional unset variables and is not
-    # compatible with nounset. Clear a stale stack marker as the setup script
-    # otherwise assumes initialization has already completed.
-    set +u
-    unset KEY4HEP_STACK
-    source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2026-04-08
-    set -u
-fi
+source "${CONFIG_DIR}/setup.sh"
+idea_use_local "${LOCAL_K4GEO}"
+idea_use_local "${LOCAL_K4RECTRACKER}"
+idea_use_local "${LOCAL_K4RECCALORIMETER}"
 
-# Load the local k4geo Geant4 plugin before simulation. It preserves detected
-# Cherenkov-photon counts by charged parent in SimCalorimeterHit contributions.
-if [[ -d "${LOCAL_K4GEO}/install-local" ]]; then
-    previous_dir=${PWD}
-    cd "${LOCAL_K4GEO}"
-    k4_local_repo install-local
-    cd "${previous_dir}"
-else
-    echo "Missing local k4geo installation: ${LOCAL_K4GEO}/install-local" >&2
-    echo "Build it with ${CONFIG_DIR}/build_k4geo.sh" >&2
-    exit 1
-fi
-
-# Prefer the locally patched k4RecCalorimeter. Entering its source directory is
-# required because k4_local_repo resolves the install path relative to $PWD.
-if [[ -d "${LOCAL_K4RECCALORIMETER}/install-local" ]]; then
-    previous_dir=${PWD}
-    cd "${LOCAL_K4RECCALORIMETER}"
-    k4_local_repo install-local
-    cd "${previous_dir}"
-else
-    echo "Missing local k4RecCalorimeter installation: ${LOCAL_K4RECCALORIMETER}/install-local" >&2
-    echo "Build it with ${CONFIG_DIR}/build_k4reccalorimeter.sh" >&2
-    exit 1
-fi
+# Capture the rolling stack and exact local sources with every output file.
+{
+    printf 'stack_request=%s\nstack_view=%s\nstack_id=%s\nenable_ggtf=%s\n' \
+        "${IDEA_STACK_REQUEST}" "${LCG_VIEW_DIR}" "${IDEA_STACK_ID}" "${ENABLE_GGTF}"
+    for component in FCC-config k4geo-local k4RecTracker-local k4RecCalorimeter-local; do
+        printf '%s=%s\n' "${component}" "$(git -C "${CONFIG_DIR}/${component}" rev-parse HEAD)"
+    done
+    sha256sum "${CONFIG_DIR}/run_sim.sh" "${CONFIG_DIR}/setup.sh" "${CONFIG_DIR}/pythia.py"
+} > "${WORKDIR}/software_versions.txt"
 
 DDSIM_ARGS=(
     --outputFile IDEA_sim.root
@@ -140,7 +117,7 @@ if [[ "${SAMPLE}" == gun_* ]]; then
 else
     cp "${PYTHIA_DIR}/pythia/${SAMPLE}.cmd" card.cmd
     printf '\nRandom:seed=%s\n' "${NUM}" >> card.cmd
-    run_with_progress generation "${LOGDIR}/generation.log" k4run "${PYTHIA_DIR}/pythia.py" \
+    run_with_progress generation "${LOGDIR}/generation.log" k4run "${CONFIG_DIR}/pythia.py" \
         -n "${NEV}" \
         --Dumper.Filename out.hepmc \
         --Pythia8.PythiaInterface.pythiacard card.cmd
@@ -149,14 +126,18 @@ fi
 
 run_with_progress simulation "${LOGDIR}/simulation.log" ddsim "${DDSIM_ARGS[@]}"
 
-# Required by the DCH digitization. The tracking model is fetched by the
-# official reconstruction job itself.
-wget -nv --no-clobber \
-    https://fccsw.web.cern.ch/fccsw/filesForSimDigiReco/IDEA/DataAlgFORGEANT.root
-
+# Keep proxy tracks for the existing MLPF reader, alongside upstream's fitted
+# tracks. Fitted-track supervision is a separate postprocessing development.
 run_with_progress reconstruction "${LOGDIR}/reconstruction.log" k4run "${TUTORIAL_DIR}/run_digi_reco.py" \
     --IOSvc.Input IDEA_sim.root \
-    --IOSvc.Output IDEA_sim_digi_reco.root
+    --IOSvc.Output IDEA_sim_digi_reco.root \
+    --addTruthTracks true --addRecoTracks "${ENABLE_GGTF}" \
+    --trackingModel "${TRACKING_MODEL}"
+
+if [[ -f ${TRACKING_MODEL} ]]; then
+    sha256sum "${TRACKING_MODEL}" >> software_versions.txt
+fi
 
 test -s IDEA_sim_digi_reco.root
 cp IDEA_sim_digi_reco.root "${FULLOUTDIR}/reco_${SAMPLE}_${NUM}.root"
+cp software_versions.txt "${FULLOUTDIR}/reco_${SAMPLE}_${NUM}.software.txt"
