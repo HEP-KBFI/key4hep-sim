@@ -8,7 +8,7 @@ checked on **16 November 2026**, plus local MLPF patches. The submodules pin:
 | FCC-config | `955329110fe0dd51003f01d5e63176ed282c537d` | Fast optical transport; both readout truth links and named cluster channel energies |
 | k4geo | `4013b50b4b951f6ec0ebff1c941ce02be0df4a2c` | Preserve Cherenkov-photon counts by charged parent in hit contributions |
 | k4RecCalorimeter | `f0085b42a0461fb780c1fb8818f24d3e7463060c` | Optical digi-to-sim links; merge equal cell IDs; channel-energy metadata; empty-cell guard; energy-weight truth across merged readouts |
-| k4RecTracker | `c1cceda0c74f62e1451b2a41282ca9e23fa88bfd` | Local build-directory ignores only; includes November GGTF and failed-fit fixes |
+| k4RecTracker | `c1cceda0c74f62e1451b2a41282ca9e23fa88bfd` | Ordered-hit circle-seed orientation and actual fitted-charge output; includes November GGTF and failed-fit fixes |
 
 All component branches are `idea-upstream-2026-11`. Upstream's cellID-based
 truth matching, indexed truth lookup, fast topoclustering and phi-wrapping fixes
@@ -102,9 +102,10 @@ The generated `.sif` is ignored by Git and must be built on a fresh checkout. Fi
 `${OUTDIR}/${process}/root/reco_${process}_${seed}.root`.
 
 The new `particleflow_spec.yaml` production workspace is
-`IDEA_o1_v03_upstream_20261116_fitted`, with TFDS version **0.4.0**. Reuse updated
-ROOT files if they contain `FittedTracks` and tracker truth links; regenerate
-Parquet/TFDS in the new workspace. The published 0.2.1 data and the 0.3.0 recipe
+`IDEA_o1_v03_upstream_20261116_fitted_trackingfix_20261117`, with TFDS version
+**0.4.1**. Regenerate reconstruction, Parquet and TFDS: unpatched 0.4.0
+`FittedTracks` need refitting. Stored simulation or GGTF candidates can be reused.
+The published 0.2.1 data and the 0.3.0 recipe
 use proxy tracks and must not be relabelled as fitted data.
 
 ## Check the local truth patch
@@ -153,7 +154,7 @@ in the same IDEA environment. Use `--proxy-only` if GGTF was disabled.
 zero GGTF candidates for this electron event. GenFit was configured and ran,
 but had no tracks to fit. This validates execution and the proxy-track data
 path as it existed in 0.3.0, not realistic tracking or PF performance. Current
-0.4.0 postprocessing uses only fitted inputs, so an event with no fitted tracks
+0.4.x postprocessing uses only fitted inputs, so an event with no fitted tracks
 has an empty track input. `check_reco.py` always reports
 track counts; pass `--require-fitted-tracks` when testing an event expected to
 exercise the fitter. Validate the model and thresholds on representative
@@ -184,17 +185,38 @@ matches choose one representative by purity, hit count and fit quality; input
 order and measured parameters are preserved.
 
 The postprocessor records source, collection, quality/truth policies and
-raw/rejected/matched track counts in Parquet. The 0.4.0 TFDS builder validates
+raw/rejected/matched track counts in Parquet. The 0.4.x TFDS builders validate
 this provenance and rejects legacy or mixed inputs. The preparation helper
 also preserves provenance instead of relabelling proxy data.
 
-The three-event ttbar validation retained 47 of 50 stored fitted tracks
+Before the tracking fix, the three-event ttbar validation retained 47 of 50 stored fitted tracks
 (21/11/15), with 40 direct primary labels (18/10/12). ROOT-to-Parquet, finite
 MLPF tensors, and an actual 0.4.0 ArrayRecord TFDS build/read passed. Fitting
 outliers remain in the accepted measured inputs; tracking performance still
-needs validation, and ycand remains a target oracle. No new simulation is
-required for this postprocessing change if updated ROOT inputs are available.
+needs validation, and ycand remains a target oracle. The postprocessing-only change did not require new simulation; the 0.4.1
+tracking fix additionally requires refitting unpatched tracks.
 
 `ENABLE_GGTF=false` is now suitable only for explicit legacy proxy diagnostics;
 postprocessing such outputs requires `--idea-track-source truth_seeded` and
 legacy builders/loader overrides. The fitted path never falls back implicitly.
+
+## GenFit orientation and charge fix (0.4.1)
+
+The local tracker uses the signed angular progression of the full ordered hit
+path for the circle-seed direction, rather than the direction from the fitted
+PCA to the second hit. It serializes GENFIT's fitted charge, including the
+helix covariance and calorimeter extrapolation, rather than retaining the
+seed charge after a q/p sign change.
+
+On the same 100 ttbar events and 3,046 stored GGTF candidates, refitting reduced
+nearly reversed primary representatives from 137/1,335 (10.26%) to 3/1,349
+(0.22%). Accepted track inputs increased from 1,543 to 1,567. No MC information
+is used in either correction. Overall direction alignment improved from
+69.51% to 80.58%, so the 95% quality gate is still not met. Three low-pT
+reversals and other fit outliers remain; the oracle baseline is unchanged.
+
+The tracker includes `test_FastCircleSeed`, enabled by `BUILD_TESTING=ON`, with
+synthetic arc tests and measured hit coordinates from a reversed candidate.
+These tests need no external event file or tracking model. The refit study,
+native charge audit and before/after ROOT files are in the parent project's
+`reports/idea-tracking-fix-20261117/` directory.
