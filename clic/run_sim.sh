@@ -13,6 +13,10 @@ export GENERATOR_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 export NEV=${NEV:-100}
 export SAMPLE=$1 #main card
 export NUM=$2 #random seed
+case "${SAMPLE}" in
+    p8_ee_Z_qq_ecm91|p8_ee_Z_tautau_ecm91) COLLIDER=fccee ;;
+    *) COLLIDER=clic ;;
+esac
 
 #Change these as needed
 export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/v1.4.0/}
@@ -45,7 +49,7 @@ source '${GENERATOR_ROOT}/setup.sh'
 key4hep_write_manifest software.txt
 env
 ls `pwd`
-bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' clic
+bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' '${COLLIDER}'
 cat generation.software.txt >> software.txt
 ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
 cd clic/CLICPerformance/clicConfig

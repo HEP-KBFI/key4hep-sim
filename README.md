@@ -87,7 +87,7 @@ apptainer exec --bind /cvmfs,"$PWD",/tmp \
 |---|---|---|
 | CLD | CLD_o2_v07 | `p8_ee_qq_ecm365`, `p8_ee_ttbar_ecm365`, `p8_ee_WW_fullhad_ecm365` |
 | IDEA | IDEA_o1_v03 | Same FCC-ee samples and cards as CLD |
-| ILD | ILD_FCCee_v02 | Same three FCC-ee samples, 365 GeV, 2 T |
+| ILD | ILD_FCCee_v02 | Same FCC-ee samples, including Z→qq/tautau at 91 GeV; 2 T |
 | CLIC | CLIC_o3_v14 | `p8_ee_qq_ecm380`, `p8_ee_ttbar_ecm380`, `p8_ee_WW_fullhad_ecm380` |
 
 Outputs are `OUTDIR/SAMPLE/root/reco_SAMPLE_SEED.root` plus a software manifest.
@@ -106,7 +106,9 @@ adds the seed, invokes `pythia/generate.py` with the same event service, and
 records source/staged card hashes in the output software manifest.
 The cards supply FCC-ee 2025 vertex widths; no additional GenAlg smearing is
 applied. CLIC shares the generator steering but uses `pythia/clic` for its
-380 GeV collision settings. Comparing 365 and 380 GeV is not a fixed-energy
+380 GeV collision settings. CLIC Z→qq and Z→tautau at 91 GeV select the
+same FCC-ee cards as the other detectors. ILD infers 91 GeV reconstruction
+energy for these Z samples and 365 GeV for its other collision samples. Comparing 365 and 380 GeV is not a fixed-energy
 detector comparison.
 
 The merge of `main` retains optional CLD BHWIDE and MadGraph LHE inputs:

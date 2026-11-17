@@ -20,3 +20,7 @@ directories. Failures do not delete scratch data or publish partial ROOT files.
 
 The recipe is experimental. Detector-quality qualification is separate from
 successful execution and TFDS integration.
+
+The collision recipe supports ttbar, qq and WW fullhad at 365 GeV, and
+`p8_ee_Z_qq_ecm91` / `p8_ee_Z_tautau_ecm91` at 91 GeV. It selects the matching
+reconstruction energy automatically; a conflicting `CMS_ENERGY` is rejected.

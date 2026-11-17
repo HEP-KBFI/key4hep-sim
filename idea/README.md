@@ -94,8 +94,8 @@ The generated `.sif` is ignored by Git and must be built on a fresh checkout. Fi
 `${OUTDIR}/${process}/root/reco_${process}_${seed}.root`.
 
 The new `particleflow_spec.yaml` production workspace is
-`v1.4.0`, with TFDS version
-**0.4.0**. Regenerate reconstruction, Parquet and TFDS: development
+`v1.4.0/50k`, with TFDS version
+**0.5.0**. Regenerate reconstruction, Parquet and TFDS: development
 `FittedTracks` produced before the tracking fix need refitting. Stored simulation or GGTF candidates can be reused.
 The published 0.2.1/0.3.0 data and intermediate upstream-update recipe
 use proxy tracks and must not be relabelled as fitted data.

@@ -6,7 +6,11 @@ NUM=${2:?Usage: run_sim.sh PROCESS RANDOM_SEED}
 CONFIG_DIR=${CONFIG_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 export ILD_CONFIG_DIR=${ILD_CONFIG_DIR:-${CONFIG_DIR}/ILDConfig}
 NEV=${NEV:-100}
-CMS_ENERGY=${CMS_ENERGY:-365}
+case "${SAMPLE}" in
+    p8_ee_Z_qq_ecm91|p8_ee_Z_tautau_ecm91) sample_energy=91 ;;
+    *) sample_energy=365 ;;
+esac
+CMS_ENERGY=${CMS_ENERGY:-${sample_energy}}
 OUTDIR=${OUTDIR:?Set OUTDIR to the production gen directory}
 WORKDIR=${WORKDIR:?Set an empty WORKDIR; intermediate files are retained}
 mkdir -p "${WORKDIR}" "${OUTDIR}/${SAMPLE}/root"
@@ -68,10 +72,10 @@ if [[ ${SAMPLE} == gun_* ]]; then
     reco_args+=(--usingParticleGun)
 else
     case "${SAMPLE}" in
-        p8_ee_qq_ecm365|p8_ee_ttbar_ecm365|p8_ee_WW_fullhad_ecm365) ;;
+        p8_ee_qq_ecm365|p8_ee_ttbar_ecm365|p8_ee_WW_fullhad_ecm365|p8_ee_Z_qq_ecm91|p8_ee_Z_tautau_ecm91) ;;
         *) echo "Unsupported ILD physics sample: ${SAMPLE}" >&2; exit 1 ;;
     esac
-    [[ ${CMS_ENERGY} == 365 ]] || { echo "365 GeV cards require CMS_ENERGY=365" >&2; exit 1; }
+    [[ ${CMS_ENERGY} == "${sample_energy}" ]] || { echo "${SAMPLE} requires CMS_ENERGY=${sample_energy}" >&2; exit 1; }
     bash "${CONFIG_DIR}/../generators/generate_events.sh" "${SAMPLE}" "${NUM}" "${NEV}" fccee > generation.log 2>&1
     cat generation.software.txt >> software.txt
     sim_args+=(--inputFiles "${WORKDIR}/out.hepmc")

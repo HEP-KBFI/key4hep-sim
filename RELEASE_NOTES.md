@@ -11,6 +11,8 @@ CLD, CLIC, IDEA and ILD. The planned tag is `v1.4.0`; it has not been created.
   explicit IP-state lookup and fitted-track kinematics.
 - One FCC-ee card source (`pythia/fccee`) and one generator steering/service
   for CLD, IDEA and ILD. CLIC uses the same steering with its 380 GeV cards.
+- ILD and CLIC support the shared Z→qq/tautau cards at 91 GeV for the
+  joint 50k-event campaign; ILD reconstruction uses the matching beam energy.
 - FCC-ee 2025 beam spot comes from Pythia alone; no additional vertex smear.
 - Main's CLD BHWIDE/MadGraph background adapters are retained. The 91 GeV
   MadGraph template now sets each beam to 45.5 GeV.

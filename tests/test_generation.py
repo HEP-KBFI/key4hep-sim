@@ -99,6 +99,24 @@ class GenerationContract(unittest.TestCase):
         self.assertIn("set ebeam1 45.5", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
         self.assertIn("set ebeam2 45.5", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
 
+    def test_shared_z_cards_generate_at_91gev(self):
+        for sample in ("p8_ee_Z_qq_ecm91", "p8_ee_Z_tautau_ecm91"):
+            result = self.generate(sample)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Beams:eCM = 91", (self.work / "card.cmd").read_text())
+
+    def test_ild_selects_matching_reconstruction_energy(self):
+        prefix = (ROOT / "ild/run_sim.sh").read_text().split("OUTDIR=", 1)[0]
+        for sample, energy in (("p8_ee_qq_ecm365", "365"), ("p8_ee_Z_qq_ecm91", "91"), ("p8_ee_Z_tautau_ecm91", "91")):
+            result = subprocess.run(
+                ["bash", "-c", prefix + '\nprintf "%s" "$CMS_ENERGY"', "--", sample, "12345"],
+                env={"PATH": os.environ["PATH"], "CONFIG_DIR": str(ROOT / "ild")},
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, energy)
+
     def test_all_runners_use_common_generation(self):
         for detector in ("cld", "clic", "idea", "ild"):
             script = (ROOT / detector / "run_sim.sh").read_text()
