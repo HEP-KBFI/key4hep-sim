@@ -102,6 +102,7 @@ key4hep_record_build() {
 key4hep_write_manifest() {
     local output=$1
     {
+        printf 'key4hep_sim_version=%s\n' "$(cat "${MLPF_KEY4HEP_ROOT}/VERSION")"
         printf 'key4hep_release=%s\nkey4hep_stack=%s\nkey4hep_base_id=%s\nkey4hep_build_id=%s\n' \
             "${KEY4HEP_RELEASE}" "${KEY4HEP_STACK}" "${KEY4HEP_BASE_ID}" "${KEY4HEP_BUILD_ID}"
         printf 'k4FWCore=%s\nMarlinReco=%s\n' \

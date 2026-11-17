@@ -2,6 +2,7 @@
 
 Full Geant4 simulation and reconstruction recipes for CLD, CLIC, IDEA and ILD
 at FCC-ee, using pinned detector sources and a common stable Key4hep runtime.
+The upcoming simulation software release is **v1.4.0**; its tag is not yet created.
 
 ## Shared stable runtime
 
@@ -27,10 +28,12 @@ submodules and the IDEA tracking model. Reserve several GB for source/build
 files and considerably more space for simulation outputs. The development
 image installs the headers needed by the stable Geant4 CMake configuration.
 
+The commands below target `v1.4.0` once its tag is published. Until then, use
+`--branch idea-upstream-2026-11` in the clone command to test the release branch.
+
 ```bash
-git clone --recurse-submodules https://github.com/HEP-KBFI/key4hep-sim.git
-cd key4hep-sim
-git switch idea-upstream-2026-11  # replace with the release tag once published
+git clone --branch v1.4.0 --recurse-submodules https://github.com/HEP-KBFI/key4hep-sim.git key4hep-sim-v1.4.0
+cd key4hep-sim-v1.4.0
 git submodule update --init --recursive
 apptainer build --fakeroot idea/idea-dev.sif idea/AlmaLinux9.def
 apptainer exec --bind /cvmfs,"$PWD",/tmp \
@@ -73,11 +76,11 @@ For example, from this repository root:
 ```bash
 detector=cld  # cld, idea or ild; use clic with the 380 GeV sample below
 sample=p8_ee_qq_ecm365
-mkdir -p output "work/$detector"
+mkdir -p "output/v1.4.0/$detector" "work/v1.4.0/$detector"
 apptainer exec --bind /cvmfs,"$PWD",/tmp \
   --env LD_PRELOAD=/usr/lib64/libffi.so.8 \
-  idea/idea-dev.sif env NEV=3 OUTDIR="$PWD/output/$detector" \
-  WORKDIR="$PWD/work/$detector" bash "$detector/run_sim.sh" "$sample" 12345
+  idea/idea-dev.sif env NEV=3 OUTDIR="$PWD/output/v1.4.0/$detector" \
+  WORKDIR="$PWD/work/v1.4.0/$detector" bash "$detector/run_sim.sh" "$sample" 12345
 ```
 
 | Detector | Geometry | Collision sample examples |
@@ -158,4 +161,4 @@ Run `python3 -m unittest discover -s tests -v` without a physics stack. Run
 Verify all submodule commits are public and that `git status --short` is clean.
 Tag the tested commit, not a rolling dependency branch. Release source users
 must clone recursively; GitHub's source archive does not bundle submodules.
-A tag/release has not been created by these instructions.
+The planned tag is `v1.4.0`; it has not been created.

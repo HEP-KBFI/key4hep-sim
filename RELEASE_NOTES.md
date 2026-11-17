@@ -1,7 +1,7 @@
-# Joint detector release (unreleased)
+# v1.4.0 (unreleased)
 
 This branch merges `main` through `93150fd` and prepares a common release for
-CLD, CLIC, IDEA and ILD. A release tag has not yet been assigned.
+CLD, CLIC, IDEA and ILD. The planned tag is `v1.4.0`; it has not been created.
 
 - Stable Key4hep 2026-04-08 / GCC 14.2 for all four recipes.
 - Released local k4FWCore v1.6 supplies collection metadata while retaining
