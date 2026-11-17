@@ -72,11 +72,9 @@ else
         *) echo "Unsupported ILD physics sample: ${SAMPLE}" >&2; exit 1 ;;
     esac
     [[ ${CMS_ENERGY} == 365 ]] || { echo "365 GeV cards require CMS_ENERGY=365" >&2; exit 1; }
-    cp "${CONFIG_DIR}/../cld/CLDConfig/pythia/${SAMPLE}.cmd" card.cmd
-    printf '\nRandom:seed=%s\n' "${NUM}" >> card.cmd
-    k4run "${CONFIG_DIR}/../idea/pythia.py" -n "${NEV}" --Dumper.Filename "${WORKDIR}/events.hepmc" \
-        --Pythia8.PythiaInterface.pythiacard "${WORKDIR}/card.cmd" > generation.log 2>&1
-    sim_args+=(--inputFiles "${WORKDIR}/events.hepmc")
+    bash "${CONFIG_DIR}/../generators/generate_events.sh" "${SAMPLE}" "${NUM}" "${NEV}" fccee > generation.log 2>&1
+    cat generation.software.txt >> software.txt
+    sim_args+=(--inputFiles "${WORKDIR}/out.hepmc")
 fi
 {
     printf 'simulation_command='; printf '%q ' ddsim "${sim_args[@]}"; printf '\n'

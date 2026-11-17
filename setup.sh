@@ -1,7 +1,11 @@
 #!/bin/bash
 # Source in a clean AlmaLinux 9 shell. All detector recipes use this stable base.
 export MLPF_KEY4HEP_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-export KEY4HEP_RELEASE=${KEY4HEP_RELEASE:-2026-04-08}
+export KEY4HEP_RELEASE=${KEY4HEP_RELEASE:-${KEY4HEP_VERSION:-2026-04-08}}
+if [[ -n ${KEY4HEP_VERSION:-} && ${KEY4HEP_VERSION} != "${KEY4HEP_RELEASE}" ]]; then
+    echo "KEY4HEP_VERSION and KEY4HEP_RELEASE disagree; select one stable runtime." >&2
+    return 1
+fi
 if [[ ! ${KEY4HEP_RELEASE} =~ ^20[0-9]{2}-[0-9]{2}-[0-9]{2}$ ]]; then
     echo "KEY4HEP_RELEASE must name a dated stable release, not a rolling view." >&2
     return 1

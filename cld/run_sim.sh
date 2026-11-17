@@ -1,104 +1,59 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #SBATCH -p main
 #SBATCH --mem-per-cpu=6G
 #SBATCH --cpus-per-task=1
 #SBATCH -o logs/slurm-%x-%j-%N.out
-set -e
-set -x
-
-env
-df -h
-
-export GENERATOR_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-export NEV=${NEV:-100}
-export SAMPLE=$1 #main card
-export NUM=$2 #random seed
-export GUN_PARTICLE=${GUN_PARTICLE:-}
-export GUN_ENERGY=${GUN_ENERGY:-10*GeV}
-export GUN_DISTRIBUTION=${GUN_DISTRIBUTION:-uniform}
-
-#Change these as needed
-export OUTDIR=${OUTDIR:-/local/joosep/cld_edm4hep/v1.3.1_key4hep_2026-04-08_core1.6/}
-export CONFIG_DIR=${CONFIG_DIR:-${GENERATOR_ROOT}/cld/CLDConfig}
-export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
-export FULLOUTDIR=${OUTDIR}/${SAMPLE}
-
-mkdir -p "$FULLOUTDIR/root"
-
-mkdir -p $WORKDIR
-
-# Ensure cleanup on exit, even if the job fails
+set -euo pipefail
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export GENERATOR_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+# Preserve main's optional container entry point, using the qualified dev image.
+if [[ ${RUN_SIM_IN_SINGULARITY:-0} == 1 ]]; then
+    export RUN_SIM_IN_SINGULARITY=0
+    exec apptainer exec --bind "/cvmfs,$GENERATOR_ROOT,/tmp,${OUTDIR:?Set OUTDIR},${WORKDIR:?Set WORKDIR}" \
+        --env LD_PRELOAD=/usr/lib64/libffi.so.8 "$GENERATOR_ROOT/idea/idea-dev.sif" \
+        bash "$SCRIPT_DIR/run_sim.sh" "$@"
+fi
+NEV=${NEV:-100}
+SAMPLE=${1:?Usage: run_sim.sh SAMPLE SEED}
+NUM=${2:?Set random seed}
+CONFIG_DIR=${CONFIG_DIR:-${GENERATOR_ROOT}/cld/CLDConfig}
+OUTDIR=${OUTDIR:?Set OUTDIR}
+WORKDIR=${WORKDIR:?Set an empty WORKDIR}
+mkdir -p "$OUTDIR/$SAMPLE/root" "$WORKDIR"
+OUTDIR=$(realpath "$OUTDIR")
+WORKDIR=$(realpath "$WORKDIR")
+[[ -z $(ls -A "$WORKDIR") ]] || { echo "WORKDIR must be empty: $WORKDIR" >&2; exit 1; }
+cd "$WORKDIR"
+# Retain manual-run evidence; production scratch is disposable after publishing.
 cleanup() {
-    if [ ! -z "$WORKDIR" ] && [ "$WORKDIR" != "/scratch/local/$USER" ] && [ "$WORKDIR" != "/scratch/local/$USER/" ]; then
-        echo "Cleaning up scratch directory $WORKDIR"
-        rm -Rf $WORKDIR
-    fi
+    case "$WORKDIR" in /scratch/local/${USER}/*) rm -rf -- "$WORKDIR" ;; esac
 }
 trap cleanup EXIT
-
-cd $WORKDIR
-
-cp -R $CONFIG_DIR ./
-
-if [[ "${SAMPLE}" == gun_* ]]; then
-    if [[ -z "${GUN_PARTICLE}" ]]; then
-        case "${SAMPLE}" in
-            gun_e_*) GUN_PARTICLE=e- ;;
-            gun_mu_*) GUN_PARTICLE=mu- ;;
-            gun_pi_*) GUN_PARTICLE=pi- ;;
-            *)
-                echo "Unsupported CLD particle-gun sample: ${SAMPLE}" >&2
-                exit 1
-                ;;
-        esac
-    fi
-else
-    cp $CONFIG_DIR/pythia/${SAMPLE}.cmd card.cmd
-
-    #add seed to pythia card
-    echo "Random:seed=${NUM}" >> card.cmd
-    cat card.cmd
-fi
-
-#prepare the gen-sim-reco script
-if [[ "${SAMPLE}" == gun_* ]]; then
-    echo "
-#!/bin/bash
-set -e
-source '${GENERATOR_ROOT}/setup.sh'
+source "$GENERATOR_ROOT/setup.sh"
 key4hep_write_manifest software.txt
-env
-ls `pwd`/CLDConfig/CLDConfig
-ddsim --enableGun --gun.distribution \"${GUN_DISTRIBUTION}\" --gun.energy \"${GUN_ENERGY}\" --gun.particle \"${GUN_PARTICLE}\" --crossingAngleBoost 0.0 --random.enableEventSeed --random.seed \"${NUM}\" -N \"${NEV}\" -O out_SIM.root --compactFile \$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml --steeringFile CLDConfig/CLDConfig/cld_steer.py
-
-cd CLDConfig/CLDConfig
-k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
-" > sim.sh
+cp -R "$CONFIG_DIR" CLDConfig
+export PYTHONPATH="$PWD/CLDConfig/CLDConfig:${PYTHONPATH:-}"
+sim_args=(--outputFile out_SIM.root --compactFile "$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml"
+    --steeringFile CLDConfig/CLDConfig/cld_steer.py)
+if [[ $SAMPLE == gun_* ]]; then
+    case $SAMPLE in
+        gun_e_*) particle=e- ;; gun_mu_*) particle=mu- ;; gun_pi_*) particle=pi- ;;
+        *) echo "Unsupported CLD gun: $SAMPLE" >&2; exit 1 ;;
+    esac
+    sim_args+=(--enableGun --gun.distribution "${GUN_DISTRIBUTION:-uniform}" --gun.energy "${GUN_ENERGY:-10*GeV}"
+        --gun.particle "${GUN_PARTICLE:-$particle}" --crossingAngleBoost 0.0
+        --random.enableEventSeed --random.seed "$NUM" --numberOfEvents "$NEV")
 else
-    echo "
-#!/bin/bash
-set -e
-source '${GENERATOR_ROOT}/setup.sh'
-key4hep_write_manifest software.txt
-env
-ls `pwd`/CLDConfig/CLDConfig
-k4run CLDConfig/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
-ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml --steeringFile CLDConfig/CLDConfig/cld_steer.py
-
-cd CLDConfig/CLDConfig
-k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
-" > sim.sh
+    bash "$GENERATOR_ROOT/generators/generate_events.sh" "$SAMPLE" "$NUM" "$NEV" fccee
+    cat generation.software.txt >> software.txt
+    sim_args+=(--inputFiles out.hepmc --numberOfEvents -1)
 fi
-
-cat sim.sh
-
-#execute the gen-sim-reco step
-export PYTHONPATH=$(pwd)/CLDConfig/CLDConfig:$PYTHONPATH
-bash sim.sh
-
-ls *.root
-
-#Copy the outputs
-cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
-
-cp software.txt "$FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.software.txt"
+ddsim "${sim_args[@]}"
+(
+    cd CLDConfig/CLDConfig
+    k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
+)
+output="$OUTDIR/$SAMPLE/root/reco_${SAMPLE}_${NUM}.root"
+cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root "$output.partial"
+mv "$output.partial" "$output"
+cp software.txt "${output%.root}.software.txt"

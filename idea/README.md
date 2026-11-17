@@ -78,8 +78,8 @@ to 25 to bound ONNX Runtime's retained allocations for varying event hit counts.
 Samples beginning with `gun_` use the DD4hep particle gun. Defaults are 10 GeV
 `e-`, except `gun_mu_*` selects `mu-` and `gun_pi_*` selects `pi-`. Override with
 `GUN_PARTICLE`, `GUN_ENERGY` and `GUN_DISTRIBUTION`. Other samples use the common
-CLD Pythia cards with the local `pythia.py`, which uses current k4FWCore
-event services and writes HepMC3 directly. Stage logs are under `${WORKDIR}/logs`; `LOGDIR` overrides this.
+FCC-ee cards and the shared `../pythia/generate.py` steering, which uses
+k4FWCore event services and writes HepMC3 directly. Stage logs are under `${WORKDIR}/logs`; `LOGDIR` overrides this.
 
 On the Tallinn site the batch entry point remains:
 

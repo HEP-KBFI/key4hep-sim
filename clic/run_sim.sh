@@ -35,12 +35,7 @@ trap cleanup EXIT
 
 cd $WORKDIR
 
-cp $CONFIG_DIR/pythia/${SAMPLE}.cmd card.cmd
-cp -R $CONFIG_DIR ./
-
-#add seed to pythia card
-echo "Random:seed=${NUM}" >> card.cmd
-cat card.cmd
+cp -R "$CONFIG_DIR" ./
 
 #prepare the gen-sim-reco script
 echo "
@@ -50,7 +45,8 @@ source '${GENERATOR_ROOT}/setup.sh'
 key4hep_write_manifest software.txt
 env
 ls `pwd`
-k4run ./clic/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
+bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' clic
+cat generation.software.txt >> software.txt
 ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
 cd clic/CLICPerformance/clicConfig
 k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1

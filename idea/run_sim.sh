@@ -23,7 +23,6 @@ LOGDIR=${LOGDIR:-${WORKDIR}/logs}
 
 TUTORIAL_DIR=${CONFIG_DIR}/FCC-config/FCCee/FullSim/IDEA/IDEA_o1_v03
 GEN_DIR=$(cd "${CONFIG_DIR}/.." && pwd)
-PYTHIA_DIR=${GEN_DIR}/cld/CLDConfig
 
 mkdir -p "${FULLOUTDIR}" "${WORKDIR}" "${LOGDIR}"
 
@@ -117,12 +116,9 @@ if [[ "${SAMPLE}" == gun_* ]]; then
         --numberOfEvents "${NEV}"
     )
 else
-    cp "${PYTHIA_DIR}/pythia/${SAMPLE}.cmd" card.cmd
-    printf '\nRandom:seed=%s\n' "${NUM}" >> card.cmd
-    run_with_progress generation "${LOGDIR}/generation.log" k4run "${CONFIG_DIR}/pythia.py" \
-        -n "${NEV}" \
-        --Dumper.Filename out.hepmc \
-        --Pythia8.PythiaInterface.pythiacard card.cmd
+    run_with_progress generation "${LOGDIR}/generation.log" bash "${GEN_DIR}/generators/generate_events.sh" \
+        "${SAMPLE}" "${NUM}" "${NEV}" fccee
+    cat generation.software.txt >> software_versions.txt
     DDSIM_ARGS+=(--inputFiles out.hepmc --numberOfEvents -1)
 fi
 

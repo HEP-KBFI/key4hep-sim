@@ -1,6 +1,7 @@
 [submodule "cld/CLDConfig"]
 	path = cld/CLDConfig
 	url = https://github.com/jpata/CLDConfig
+	branch = mlpf_2026
 [submodule "clic/CLICPerformance"]
 	path = clic/CLICPerformance
 	url = https://github.com/iLCSoft/CLICPerformance
@@ -25,3 +26,7 @@
 [submodule "MarlinReco"]
 	path = MarlinReco
 	url = https://github.com/iLCSoft/MarlinReco.git
+[submodule "generators/bhwide"]
+	path = generators/bhwide
+	url = https://github.com/ktht/bhwide.git
+	branch = master-cli
