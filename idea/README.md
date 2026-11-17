@@ -102,7 +102,7 @@ The generated `.sif` is ignored by Git and must be built on a fresh checkout. Fi
 `${OUTDIR}/${process}/root/reco_${process}_${seed}.root`.
 
 The new `particleflow_spec.yaml` production workspace is
-`IDEA_o1_v03_upstream_20261116_fitted_trackingfix_20261117`, with TFDS version
+`IDEA_o1_v03_upstream_20261116_fitted_trackingfix_20261117_beamspot2025`, with TFDS version
 **0.4.0**. Regenerate reconstruction, Parquet and TFDS: development
 `FittedTracks` produced before the tracking fix need refitting. Stored simulation or GGTF candidates can be reused.
 The published 0.2.1/0.3.0 data and intermediate upstream-update recipe
@@ -220,3 +220,12 @@ synthetic arc tests and measured hit coordinates from a reversed candidate.
 These tests need no external event file or tracking model. The refit study,
 native charge audit and before/after ROOT files are in the parent project's
 `reports/idea-tracking-fix-20261117/` directory.
+
+## Generator correction from particleflow PR #527
+
+The shared CLDConfig cards now use energy-dependent FCC-ee 2025 vertex widths.
+The current-service IDEA/ILD wrapper applies no additional GenAlg spatial or
+timing smear. At 365 GeV the card widths are 26.17 µm, 31.1 nm and 1.198 mm
+in x, y and z. Generate fresh ROOT files in the `beamspot2025` workspace; older
+ROOT/Parquet/TFDS outputs retain their original vertex distribution. The
+November native stack and local component pins are unchanged by this merge.

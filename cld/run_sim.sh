@@ -17,7 +17,7 @@ export GUN_ENERGY=${GUN_ENERGY:-10*GeV}
 export GUN_DISTRIBUTION=${GUN_DISTRIBUTION:-uniform}
 
 #Change these as needed
-export OUTDIR=${OUTDIR:-/local/joosep/cld_edm4hep/v1.2.2_key4hep_2025-05-29_CLD_3edac3/}
+export OUTDIR=${OUTDIR:-/local/joosep/cld_edm4hep/v1.3.0_key4hep_2026-04-08/}
 export CONFIG_DIR=${CONFIG_DIR:-/home/joosep/key4hep-sim/cld/CLDConfig}
 export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
 export FULLOUTDIR=${OUTDIR}/${SAMPLE}
@@ -64,7 +64,7 @@ if [[ "${SAMPLE}" == gun_* ]]; then
     echo "
 #!/bin/bash
 set -e
-source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2025-05-29
+source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2026-04-08
 env
 ls `pwd`/CLDConfig/CLDConfig
 ddsim --enableGun --gun.distribution \"${GUN_DISTRIBUTION}\" --gun.energy \"${GUN_ENERGY}\" --gun.particle \"${GUN_PARTICLE}\" --crossingAngleBoost 0.0 --random.enableEventSeed --random.seed \"${NUM}\" -N \"${NEV}\" -O out_SIM.root --compactFile \$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml --steeringFile CLDConfig/CLDConfig/cld_steer.py
@@ -76,7 +76,7 @@ else
     echo "
 #!/bin/bash
 set -e
-source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2025-05-29
+source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2026-04-08
 env
 ls `pwd`/CLDConfig/CLDConfig
 k4run CLDConfig/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
