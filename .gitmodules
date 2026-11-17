@@ -19,3 +19,9 @@
 [submodule "ild/ILDConfig"]
 	path = ild/ILDConfig
 	url = https://github.com/iLCSoft/ILDConfig.git
+[submodule "k4FWCore"]
+	path = k4FWCore
+	url = https://github.com/key4hep/k4FWCore.git
+[submodule "MarlinReco"]
+	path = MarlinReco
+	url = https://github.com/iLCSoft/MarlinReco.git

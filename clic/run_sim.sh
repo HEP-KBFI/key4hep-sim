@@ -9,17 +9,18 @@ set -x
 env
 df -h
 
+export GENERATOR_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 export NEV=${NEV:-100}
 export SAMPLE=$1 #main card
 export NUM=$2 #random seed
 
 #Change these as needed
-export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/v1.3.0_key4hep_2026-04-08/}
-export CONFIG_DIR=${CONFIG_DIR:-/home/joosep/particleflow/mlpf/data/key4hep/gen/clic}
+export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/v1.3.1_key4hep_2026-04-08_core1.6/}
+export CONFIG_DIR=${CONFIG_DIR:-${GENERATOR_ROOT}/clic}
 export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
 export FULLOUTDIR=${OUTDIR}/${SAMPLE}
 
-mkdir -p $FULLOUTDIR
+mkdir -p "$FULLOUTDIR/root"
 
 mkdir -p $WORKDIR
 
@@ -45,7 +46,8 @@ cat card.cmd
 echo "
 #!/bin/bash
 set -e
-source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2026-04-08
+source '${GENERATOR_ROOT}/setup.sh'
+key4hep_write_manifest software.txt
 env
 ls `pwd`
 k4run ./clic/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
@@ -64,3 +66,5 @@ ls *.root
 
 #Copy the outputs
 cp out_RECO.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
+
+cp software.txt "$FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.software.txt"

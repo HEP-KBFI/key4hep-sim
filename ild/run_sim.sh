@@ -9,7 +9,6 @@ NEV=${NEV:-100}
 CMS_ENERGY=${CMS_ENERGY:-365}
 OUTDIR=${OUTDIR:?Set OUTDIR to the production gen directory}
 WORKDIR=${WORKDIR:?Set an empty WORKDIR; intermediate files are retained}
-export IDEA_STACK_RELEASE=${IDEA_STACK_RELEASE:-Mon}
 mkdir -p "${WORKDIR}" "${OUTDIR}/${SAMPLE}/root"
 WORKDIR=$(realpath "${WORKDIR}")
 OUTDIR=$(realpath "${OUTDIR}")
@@ -32,7 +31,7 @@ python "${recipe_dir}/stage_geometry.py" "${K4GEO}" "${WORKDIR}/geometry" --asse
 export K4GEO=${WORKDIR}/geometry
 {
     printf 'detector=ILD_FCCee_v02\nstack=%s\nstack_id=%s\nseed=%s\nevents=%s\ncms_energy=%s\n' \
-        "${LCG_VIEW_DIR}" "${IDEA_STACK_ID}" "${NUM}" "${NEV}" "${CMS_ENERGY}"
+        "${KEY4HEP_STACK}" "${IDEA_STACK_ID}" "${NUM}" "${NEV}" "${CMS_ENERGY}"
     for repo in "${ILD_CONFIG_DIR}" "${CONFIG_DIR}/../idea/k4geo-local" "${CONFIG_DIR}/../idea/k4RecTracker-local"; do
         printf '%s=%s\n' "${repo}" "$(git -C "${repo}" rev-parse HEAD)"
         git -C "${repo}" diff | sha256sum
@@ -40,6 +39,8 @@ export K4GEO=${WORKDIR}/geometry
     sha256sum "${recipe_dir}"/*.py "${recipe_dir}"/*.sh
     find geometry -type f \( -name '*.xml' -o -name '*.root' -o -name '*.stl' \) -print0 | sort -z | xargs -0 sha256sum
 } > software.txt
+key4hep_write_manifest framework_versions.txt
+cat framework_versions.txt >> software.txt
 sim_args=(--compactFile "${K4GEO}/FCCee/ILD_FCCee/compact/ILD_FCCee_v02/ILD_FCCee_v02.xml"
     --steeringFile "${ILD_CONFIG_DIR}/StandardConfig/production/ddsim_steer.py"
     --outputFile "${WORKDIR}/sim.edm4hep.root" --numberOfEvents "${NEV}"

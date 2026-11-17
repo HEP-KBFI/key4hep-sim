@@ -4,12 +4,12 @@ set -euo pipefail
 
 CONFIG_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SOURCE_DIR=${CONFIG_DIR}/k4geo-local
-BUILD_DIR=${SOURCE_DIR}/build-local
-INSTALL_DIR=${SOURCE_DIR}/install-local
 
 source "${CONFIG_DIR}/setup.sh"
+BUILD_DIR=${KEY4HEP_LOCAL_ROOT}/build/k4geo
+INSTALL_DIR=$(key4hep_install_dir "${SOURCE_DIR}")
 
-rm -f "${INSTALL_DIR}/.idea-stack-id"
+rm -f "${INSTALL_DIR}/.key4hep-build-id"
 cmake --fresh -G Ninja -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DCMAKE_INSTALL_LIBDIR=lib \
@@ -19,4 +19,4 @@ cmake --fresh -G Ninja -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
     -DINSTALL_COMPACT_FILES=OFF
 cmake --build "${BUILD_DIR}" --parallel "${BUILD_JOBS:-4}"
 cmake --install "${BUILD_DIR}"
-printf '%s\n' "${IDEA_STACK_ID}" > "${INSTALL_DIR}/.idea-stack-id"
+key4hep_record_build "${SOURCE_DIR}"

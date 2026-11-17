@@ -80,15 +80,17 @@ idea_use_local "${LOCAL_K4GEO}"
 idea_use_local "${LOCAL_K4RECTRACKER}"
 idea_use_local "${LOCAL_K4RECCALORIMETER}"
 
-# Capture the rolling stack and exact local sources with every output file.
+# Capture the stable stack and exact local sources with every output file.
 {
     printf 'stack_request=%s\nstack_view=%s\nstack_id=%s\nenable_ggtf=%s\n' \
-        "${IDEA_STACK_REQUEST}" "${LCG_VIEW_DIR}" "${IDEA_STACK_ID}" "${ENABLE_GGTF}"
+        "${IDEA_STACK_REQUEST}" "${KEY4HEP_STACK}" "${IDEA_STACK_ID}" "${ENABLE_GGTF}"
     for component in FCC-config k4geo-local k4RecTracker-local k4RecCalorimeter-local; do
         printf '%s=%s\n' "${component}" "$(git -C "${CONFIG_DIR}/${component}" rev-parse HEAD)"
     done
     sha256sum "${CONFIG_DIR}/run_sim.sh" "${CONFIG_DIR}/setup.sh" "${CONFIG_DIR}/pythia.py"
 } > "${WORKDIR}/software_versions.txt"
+key4hep_write_manifest "${WORKDIR}/framework_versions.txt"
+cat "${WORKDIR}/framework_versions.txt" >> "${WORKDIR}/software_versions.txt"
 
 DDSIM_ARGS=(
     --outputFile IDEA_sim.root
@@ -126,8 +128,7 @@ fi
 
 run_with_progress simulation "${LOGDIR}/simulation.log" ddsim "${DDSIM_ARGS[@]}"
 
-# Keep proxy tracks for the existing MLPF reader, alongside upstream's fitted
-# tracks. Fitted-track supervision is a separate postprocessing development.
+# Keep proxy tracks for diagnostics alongside the fitted tracks used by MLPF.
 run_with_progress reconstruction "${LOGDIR}/reconstruction.log" k4run "${TUTORIAL_DIR}/run_digi_reco.py" \
     --IOSvc.Input IDEA_sim.root \
     --IOSvc.Output IDEA_sim_digi_reco.root \

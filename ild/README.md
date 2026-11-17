@@ -4,7 +4,9 @@
 `ILD_FCCee_v02`, with fitted `MarlinTrkTracks` and Pandora clusters/PFOs.
 `ILDConfig` is pinned to `fc1c9f58f9912b4d1fb10da5defbaca2133d60a0`.
 
-Use the AlmaLinux development image and matched GCC 16 `Mon` builds of
+Use the AlmaLinux development image, stable Key4hep 2026-04-08 and the
+[shared local overlays](../README.md), including k4FWCore v1.6 and
+MarlinReco v1.38.1. Geometry and tracking use the matched builds of
 `../idea/k4geo-local` and `../idea/k4RecTracker-local`. See
 `docs/datasets/ild.md` in particleflow for build, execution, postprocessing,
 target-policy and qualification instructions. Initialize this repository's

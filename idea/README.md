@@ -12,50 +12,42 @@ checked on **16 November 2026**, plus local MLPF patches. The submodules pin:
 
 All component branches are `idea-upstream-2026-11`. Upstream's cellID-based
 truth matching, indexed truth lookup, fast topoclustering and phi-wrapping fixes
-are retained. The old April-stack API fallbacks are removed.
+are retained. The tracker includes a compatibility helper for the explicit
+TrackState locations in stable EDM4hep 1.0.
 
 ## Build
 
-Use AlmaLinux 9 with CVMFS, CMake/Ninja and development headers. The default is
-the current **LCG devkey-head GCC 16** view, sourced by `setup.sh`. The GCC 14
-view available during this update contained dangling DD4hep links. The old
-Key4HEP `2026-04-08` release is not supported by these sources.
+All four detector recipes use **stable Key4hep 2026-04-08 (GCC 14.2)**,
+with locally compiled **k4FWCore v01-06** and **MarlinReco v01-38-01**.
+The framework supplies the collection-metadata APIs required by the current
+calorimeter code. MarlinReco includes the upstream TOF crash fix required by
+ILD. See the [shared build instructions](../README.md) for exact pins, build
+commands, cache checks and compatibility-test results.
 
-The standard runtime image lacks some Geant4 development dependencies. To make
-a local development image from it:
+Build the development image once, then compile the shared runtime and detector
+packages from a clean shell at the particleflow repository root:
 
 ```bash
 apptainer build --fakeroot mlpf/data/key4hep/gen/idea/idea-dev.sif \
   mlpf/data/key4hep/gen/idea/AlmaLinux9.def
-```
-
-Then, from a clean shell at the repository root:
-
-```bash
 git submodule update --init --recursive
-apptainer exec --bind /cvmfs,"$PWD" mlpf/data/key4hep/gen/idea/idea-dev.sif \
-  bash mlpf/data/key4hep/gen/idea/build_all.sh
+apptainer exec --bind /cvmfs,"$PWD",/tmp \
+  --env LD_PRELOAD=/usr/lib64/libffi.so.8 \
+  mlpf/data/key4hep/gen/idea/idea-dev.sif \
+  bash mlpf/data/key4hep/gen/build_all.sh
 ```
 
-The build order is geometry, tracking, calorimeter reconstruction. Every package
-uses its own `build-local` and `install-local` directories. `BUILD_JOBS` defaults
-to 4. To select a specific available nightly view, set `IDEA_STACK_RELEASE`
-(`Mon`, `Tue`, etc.) and optionally `IDEA_STACK_COMPILER`; use the same values
-for building and running.
-
-The LCG view is rolling, even when selected by weekday. Each installation saves
-a checksum of the view's setup script. The runner refuses installations built
-against a different view checksum; rebuild all components after the nightly
-changes. Each output ROOT file has a `.software.txt` companion recording the
-view, checksum, component commits and tracking-model checksum. Archive these records with production.
-The helper explicitly selects the local geometry XML as well as its plugins.
+Builds and installations live under `gen/.local/2026-04-08/`; previous nightly
+builds are separate. `BUILD_JOBS` defaults to 4. Each installation records its
+source commit and the stable-stack/framework identity. The runner refuses stale
+or modified source installations. ROOT software manifests record the stable
+release, stack checksum, framework and Marlin pins, detector commits and model
+checksum. Preserve these records with production.
 
 ## Run
 
-On this host, importing DDG4 with the 16 November GCC 16 view stalled while
-reading its nightly `libffi` from CVMFS. Preloading the container's compatible
-`libffi.so.8` allowed the import to complete. The commands below include that
-local workaround; it does not replace or modify the CVMFS stack.
+The commands preload the container's `libffi.so.8` to avoid CVMFS library
+loading stalls observed on this host.
 
 For a one-event electron smoke test, keeping logs and intermediate files:
 
@@ -97,12 +89,12 @@ APPTAINERENV_LD_PRELOAD=/usr/lib64/libffi.so.8 \
 ```
 
 The batch runtime also uses this local image through `particleflow_spec.yaml`:
-the current stack needs ICU libraries absent from the stock runtime image.
+the development image supplies the dependencies used to build the overlays.
 The generated `.sif` is ignored by Git and must be built on a fresh checkout. Final ROOT files follow
 `${OUTDIR}/${process}/root/reco_${process}_${seed}.root`.
 
 The new `particleflow_spec.yaml` production workspace is
-`IDEA_o1_v03_upstream_20261116_fitted_trackingfix_20261117_beamspot2025`, with TFDS version
+`IDEA_o1_v03_key4hep_2026-04-08_core1.6_beamspot2025`, with TFDS version
 **0.4.0**. Regenerate reconstruction, Parquet and TFDS: development
 `FittedTracks` produced before the tracking fix need refitting. Stored simulation or GGTF candidates can be reused.
 The published 0.2.1/0.3.0 data and intermediate upstream-update recipe
