@@ -16,3 +16,6 @@
 [submodule "idea/k4RecTracker-local"]
 	path = idea/k4RecTracker-local
 	url = https://github.com/HEP-KBFI/k4RecTracker.git
+[submodule "ild/ILDConfig"]
+	path = ild/ILDConfig
+	url = https://github.com/iLCSoft/ILDConfig.git
