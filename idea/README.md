@@ -103,9 +103,9 @@ The generated `.sif` is ignored by Git and must be built on a fresh checkout. Fi
 
 The new `particleflow_spec.yaml` production workspace is
 `IDEA_o1_v03_upstream_20261116_fitted_trackingfix_20261117`, with TFDS version
-**0.4.1**. Regenerate reconstruction, Parquet and TFDS: unpatched 0.4.0
-`FittedTracks` need refitting. Stored simulation or GGTF candidates can be reused.
-The published 0.2.1 data and the 0.3.0 recipe
+**0.4.0**. Regenerate reconstruction, Parquet and TFDS: development
+`FittedTracks` produced before the tracking fix need refitting. Stored simulation or GGTF candidates can be reused.
+The published 0.2.1/0.3.0 data and intermediate upstream-update recipe
 use proxy tracks and must not be relabelled as fitted data.
 
 ## Check the local truth patch
@@ -153,7 +153,7 @@ in the same IDEA environment. Use `--proxy-only` if GGTF was disabled.
 **Tracking limitation:** the upstream model at its default thresholds returned
 zero GGTF candidates for this electron event. GenFit was configured and ran,
 but had no tracks to fit. This validates execution and the proxy-track data
-path as it existed in 0.3.0, not realistic tracking or PF performance. Current
+path in the intermediate upstream-update recipe, not realistic tracking or PF performance. Current
 0.4.x postprocessing uses only fitted inputs, so an event with no fitted tracks
 has an empty track input. `check_reco.py` always reports
 track counts; pass `--require-fitted-tracks` when testing an event expected to
@@ -193,14 +193,14 @@ Before the tracking fix, the three-event ttbar validation retained 47 of 50 stor
 (21/11/15), with 40 direct primary labels (18/10/12). ROOT-to-Parquet, finite
 MLPF tensors, and an actual 0.4.0 ArrayRecord TFDS build/read passed. Fitting
 outliers remain in the accepted measured inputs; tracking performance still
-needs validation, and ycand remains a target oracle. The postprocessing-only change did not require new simulation; the 0.4.1
+needs validation, and ycand remains a target oracle. The postprocessing-only change did not require new simulation; the 0.4.0
 tracking fix additionally requires refitting unpatched tracks.
 
 `ENABLE_GGTF=false` is now suitable only for explicit legacy proxy diagnostics;
 postprocessing such outputs requires `--idea-track-source truth_seeded` and
 legacy builders/loader overrides. The fitted path never falls back implicitly.
 
-## GenFit orientation and charge fix (0.4.1)
+## GenFit orientation and charge fix (0.4.0)
 
 The local tracker uses the signed angular progression of the full ordered hit
 path for the circle-seed direction, rather than the direction from the fitted
