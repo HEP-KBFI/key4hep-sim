@@ -39,7 +39,7 @@ run_with_progress() {
     local log_file=$2
     shift 2
 
-    "$@" > >(tee -a "${log_file}") 2>&1 &
+    "$@" > >(sed -u -E '/^[^[:space:]]+[[:space:]]+(DEBUG|VERBOSE)[[:space:]]/d' | tee -a "${log_file}") 2>&1 &
     local command_pid=$!
     (
         local elapsed=0
@@ -69,6 +69,9 @@ run_with_progress() {
     set -e
     kill "${monitor_pid}" 2>/dev/null || true
     wait "${monitor_pid}" 2>/dev/null || true
+    if (( status != 0 )); then
+        printf '%s failed (exit %s). Log: %s\n' "$label" "$status" "$log_file" >&2
+    fi
     return "${status}"
 }
 

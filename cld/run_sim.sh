@@ -30,6 +30,7 @@ cleanup() {
 }
 trap cleanup EXIT
 source "$GENERATOR_ROOT/setup.sh"
+source "$GENERATOR_ROOT/stage_logging.sh"
 key4hep_write_manifest software.txt
 cp -R "$CONFIG_DIR" CLDConfig
 export PYTHONPATH="$PWD/CLDConfig/CLDConfig:${PYTHONPATH:-}"
@@ -44,14 +45,14 @@ if [[ $SAMPLE == gun_* ]]; then
         --gun.particle "${GUN_PARTICLE:-$particle}" --crossingAngleBoost 0.0
         --random.enableEventSeed --random.seed "$NUM" --numberOfEvents "$NEV")
 else
-    bash "$GENERATOR_ROOT/generators/generate_events.sh" "$SAMPLE" "$NUM" "$NEV" fccee
+    run_stage generation bash "$GENERATOR_ROOT/generators/generate_events.sh" "$SAMPLE" "$NUM" "$NEV" fccee
     cat generation.software.txt >> software.txt
-    sim_args+=(--inputFiles out.hepmc --numberOfEvents -1)
+    sim_args+=(--inputFiles out.hepmc --numberOfEvents "$NEV")
 fi
-ddsim "${sim_args[@]}"
+run_stage simulation ddsim "${sim_args[@]}"
 (
     cd CLDConfig/CLDConfig
-    k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
+    run_stage reconstruction k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
 )
 output="$OUTDIR/$SAMPLE/root/reco_${SAMPLE}_${NUM}.root"
 cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root "$output.partial"

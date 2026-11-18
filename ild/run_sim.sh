@@ -24,13 +24,30 @@ if [[ $(realpath "${BASH_SOURCE[0]}") != "${recipe_dir}/run_sim.sh" ]]; then
     exec bash "${recipe_dir}/run_sim.sh" "${SAMPLE}" "${NUM}"
 fi
 source "${CONFIG_DIR}/../idea/setup.sh"
+if [[ ${ILD_USE_PATCHED_REFITTER:-0} == 1 ]]; then
+    refitter="${KEY4HEP_LOCAL_ROOT}/install/MarlinTrkProcessors/lib/libMarlinTrkProcessors.so"
+    test -r "$refitter"
+    IFS=: read -r -a marlin_plugins <<< "$MARLIN_DLL"
+    replaced_refitter=0
+    for i in "${!marlin_plugins[@]}"; do
+        if [[ ${marlin_plugins[i]} == */marlintrkprocessors/* ]]; then
+            marlin_plugins[i]=$refitter
+            replaced_refitter=1
+        fi
+    done
+    test "$replaced_refitter" = 1
+    MARLIN_DLL=$(IFS=:; printf '%s' "${marlin_plugins[*]}")
+    export MARLIN_DLL
+fi
 geometry_assets=${K4GEO}
 idea_use_local "${CONFIG_DIR}/../idea/k4geo-local"
 idea_use_local "${CONFIG_DIR}/../idea/k4RecTracker-local"
 test "$(git -C "${ILD_CONFIG_DIR}" rev-parse HEAD)" = fc1c9f58f9912b4d1fb10da5defbaca2133d60a0
 git -C "${ILD_CONFIG_DIR}" diff --exit-code HEAD -- .
 cd "${WORKDIR}"
-trap 'status=$?; if (( status != 0 )); then echo "ILD job failed (${status}); logs retained in ${WORKDIR}" >&2; fi' EXIT
+export LOGDIR=${LOGDIR:-${WORKDIR}}
+source "${CONFIG_DIR}/../stage_logging.sh"
+trap 'status=$?; if (( status != 0 )); then echo "ILD job failed (${status}); logs retained in ${LOGDIR}" >&2; fi' EXIT
 python "${recipe_dir}/stage_geometry.py" "${K4GEO}" "${WORKDIR}/geometry" --assets "${geometry_assets}"
 export K4GEO=${WORKDIR}/geometry
 {
@@ -76,7 +93,7 @@ else
         *) echo "Unsupported ILD physics sample: ${SAMPLE}" >&2; exit 1 ;;
     esac
     [[ ${CMS_ENERGY} == "${sample_energy}" ]] || { echo "${SAMPLE} requires CMS_ENERGY=${sample_energy}" >&2; exit 1; }
-    bash "${CONFIG_DIR}/../generators/generate_events.sh" "${SAMPLE}" "${NUM}" "${NEV}" fccee > generation.log 2>&1
+    run_stage generation bash "${CONFIG_DIR}/../generators/generate_events.sh" "${SAMPLE}" "${NUM}" "${NEV}" fccee
     cat generation.software.txt >> software.txt
     sim_args+=(--inputFiles "${WORKDIR}/out.hepmc")
 fi
@@ -85,8 +102,8 @@ fi
     printf 'reconstruction_command='; printf '%q ' k4run "${recipe_dir}/reconstruct.py" "${reco_args[@]}"; printf '\n'
     [[ ! -f card.cmd ]] || sha256sum card.cmd
 } >> software.txt
-ddsim "${sim_args[@]}" > simulation.log 2>&1
-k4run "${recipe_dir}/reconstruct.py" "${reco_args[@]}" > reconstruction.log 2>&1
+run_stage simulation ddsim "${sim_args[@]}"
+run_stage reconstruction k4run "${recipe_dir}/reconstruct.py" "${reco_args[@]}"
 output=${OUTDIR}/${SAMPLE}/root/reco_${SAMPLE}_${NUM}.root
 test -s reco_REC.edm4hep.root
 cp reco_REC.edm4hep.root "${output}.partial"

@@ -1,0 +1,36 @@
+diff --git a/source/Refitting/src/RefitProcessor.cc b/source/Refitting/src/RefitProcessor.cc
+index 394acb2..a01f22f 100644
+--- a/source/Refitting/src/RefitProcessor.cc
++++ b/source/Refitting/src/RefitProcessor.cc
+@@ -162,6 +162,14 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+     for (int i = 0; i < nTracks; ++i) {
+       Track* track_to_refit = dynamic_cast<Track*>(input_track_col->getElementAt(i));
+ 
++      const auto* seedState = _initialTrackState >= 0 ? track_to_refit->getTrackState(_initialTrackState) : nullptr;
++      if (_initialTrackState >= 0 && !seedState) {
++        streamlog_out(WARNING) << "Skipping refit for run " << evt->getRunNumber() << ", event "
++                               << evt->getEventNumber() << ", track " << i << " in " << _input_track_col_name
++                               << ": missing track state " << _initialTrackState << std::endl;
++        continue;
++      }
++
+       EVENT::TrackerHitVec trkHits = track_to_refit->getTrackerHits();
+ 
+       std::vector<std::pair<float, EVENT::TrackerHit*>> r2_values;
+@@ -227,15 +235,7 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+ 
+         } else { // use the specified track state
+ 
+-          EVENT::TrackState* ts = const_cast<EVENT::TrackState*>(track_to_refit->getTrackState(_initialTrackState));
+-
+-          if (!ts) {
+-            std::stringstream ess;
+-            ess << "  Could not get track state at " << _initialTrackState << " from track to refit ";
+-            throw EVENT::Exception(ess.str());
+-          }
+-
+-          IMPL::TrackStateImpl pre_fit(*ts);
++          IMPL::TrackStateImpl pre_fit(*seedState);
+           pre_fit.setCovMatrix(covMatrix);
+ 
+           error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, &pre_fit,

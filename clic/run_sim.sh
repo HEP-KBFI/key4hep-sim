@@ -6,7 +6,6 @@
 set -e
 set -x
 
-env
 df -h
 
 export GENERATOR_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -46,14 +45,14 @@ echo "
 #!/bin/bash
 set -e
 source '${GENERATOR_ROOT}/setup.sh'
+source '${GENERATOR_ROOT}/stage_logging.sh'
 key4hep_write_manifest software.txt
-env
 ls `pwd`
-bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' '${COLLIDER}'
+run_stage generation bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' '${COLLIDER}'
 cat generation.software.txt >> software.txt
-ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
+run_stage simulation ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
 cd clic/CLICPerformance/clicConfig
-k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1
+run_stage reconstruction k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1
 " > sim.sh
 
 cat sim.sh
