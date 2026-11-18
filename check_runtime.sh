@@ -3,6 +3,7 @@
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$root/idea/setup.sh"
+source "$root/ild/use_refitter.sh"
 assets=$K4GEO
 for package in k4geo k4RecTracker k4RecCalorimeter; do
     idea_use_local "$root/idea/${package}-local"

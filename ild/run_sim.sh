@@ -24,21 +24,7 @@ if [[ $(realpath "${BASH_SOURCE[0]}") != "${recipe_dir}/run_sim.sh" ]]; then
     exec bash "${recipe_dir}/run_sim.sh" "${SAMPLE}" "${NUM}"
 fi
 source "${CONFIG_DIR}/../idea/setup.sh"
-if [[ ${ILD_USE_PATCHED_REFITTER:-0} == 1 ]]; then
-    refitter="${KEY4HEP_LOCAL_ROOT}/install/MarlinTrkProcessors/lib/libMarlinTrkProcessors.so"
-    test -r "$refitter"
-    IFS=: read -r -a marlin_plugins <<< "$MARLIN_DLL"
-    replaced_refitter=0
-    for i in "${!marlin_plugins[@]}"; do
-        if [[ ${marlin_plugins[i]} == */marlintrkprocessors/* ]]; then
-            marlin_plugins[i]=$refitter
-            replaced_refitter=1
-        fi
-    done
-    test "$replaced_refitter" = 1
-    MARLIN_DLL=$(IFS=:; printf '%s' "${marlin_plugins[*]}")
-    export MARLIN_DLL
-fi
+source "${CONFIG_DIR}/use_refitter.sh"
 geometry_assets=${K4GEO}
 idea_use_local "${CONFIG_DIR}/../idea/k4geo-local"
 idea_use_local "${CONFIG_DIR}/../idea/k4RecTracker-local"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the ILD smoke refitter overlay against the stable Key4hep release.
+# Build the ILD mass refitter overlay against the stable Key4hep release.
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$root/setup.sh"

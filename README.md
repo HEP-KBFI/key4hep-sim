@@ -48,8 +48,9 @@ In a particleflow checkout, run the same commands from
 `mlpf/data/key4hep/gen/`. Its `scripts/check_ild_runtime.sh` wrapper runs the
 same native check. Build once on the execution host before submitting jobs.
 
-`build_all.sh` builds framework, MarlinReco, geometry, tracking, then calorimeter
-reconstruction. CLD/CLIC alone need only `build_overlays.sh`. Builds use Ninja,
+`build_all.sh` builds the framework, MarlinReco, the patched
+MarlinTrkProcessors refitter, geometry, tracking, and calorimeter reconstruction.
+ILD automatically loads the patched refitter for alternate-mass fits. CLD/CLIC alone need only `build_overlays.sh`. Builds use Ninja,
 RelWithDebInfo and four workers (`BUILD_JOBS` overrides). Shared installations
 are under `.local/2026-04-08/install/`, separate from old nightly builds.
 A clean shell/container is required: rolling views and mixed releases are
