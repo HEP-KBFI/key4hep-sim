@@ -1,34 +1,23 @@
-# v1.4.0 (unreleased)
+# v1.4.0
 
-This branch merges `main` through `93150fd` and prepares a common release for
-CLD, CLIC, IDEA and ILD. The planned tag is `v1.4.0`; it has not been created.
+Joint release of the CLD, CLIC, IDEA and ILD full-simulation recipes.
 
-- Stable Key4hep 2026-04-08 / GCC 14.2 for all four recipes.
-- Released local k4FWCore v1.6 supplies collection metadata while retaining
-  CLD/CLIC's event-service compatibility; released MarlinReco v1.38.1 fixes
-  the ILD TOF crash. Both upstream releases build without source changes.
-- Tracker compatibility with stable EDM4hep 1.0 and PODIO 1.7, preserving
-  explicit IP-state lookup and fitted-track kinematics.
-- One FCC-ee card source (`pythia/fccee`) and one generator steering/service
-  for CLD, IDEA and ILD. CLIC uses the same steering with its 380 GeV cards.
-- ILD and CLIC support the shared Z→qq/tautau cards at 91 GeV for the
-  joint 50k-event campaign; ILD reconstruction uses the matching beam energy.
-- FCC-ee 2025 beam spot comes from Pythia alone; no additional vertex smear.
-- Main's CLD BHWIDE/MadGraph background adapters are retained. The 91 GeV
-  MadGraph template keeps 45 GeV per beam.
-- Standalone build and runtime checks, source/build identity validation,
-  card hashes in software manifests, and isolated job work directories.
-- Apache-2.0 license for repository-owned code; dependency terms remain
-  separate as described in NOTICE.
+- One stable runtime for all detectors: Key4hep 2026-04-08 with locally built
+  k4FWCore v01-06 and MarlinReco v01-38-01 overlays (`setup.sh`, `build_all.sh`).
+- Fitted IDEA tracking (GGTF track finding and GenFit fitting from the pinned
+  k4RecTracker fork, including the circle-seed orientation and fitted-charge
+  fixes) alongside the existing dual-readout calorimeter truth patches.
+- New ILD at FCC-ee recipe (`ILD_FCCee_v02`) with Clupatra tracking, a patched
+  MarlinTrkProcessors refitter that drops failed refits, and Pandora.
+- One FCC-ee card set and generator steering for CLD, IDEA and ILD; CLIC shares
+  the steering with its 380 GeV cards and uses the FCC-ee Z cards at 91 GeV.
+- Pythia supplies the FCC-ee 2025 beam spot; no additional vertex smearing.
+- All runners pass the job seed to ddsim, publish outputs atomically, write a
+  `reco_SAMPLE_SEED.software.txt` manifest and clean production scratch.
+- The IDEA tracking model is downloaded once at build time.
+- CLD's BHWIDE and MadGraph Bhabha inputs are retained (45 GeV per beam).
+- Standalone build and runtime checks, build-identity validation, and
+  Apache-2.0 licensing for repository-owned code.
 
-See README.md for build/run instructions. Compatibility validation includes
-97 k4FWCore tests, eight native tracker tests, six standalone generation tests,
-three qq simulation/reconstruction events per detector, and additional smoke
-runs of the merged recipes. Native generation with the shared steering passed
-for qq, ttbar, WW fullhad and BHWIDE. MadGraph's adapter has a mocked regression
-test; native MadGraph generation is not qualified here.
-
-The small compatibility samples do not qualify detector physics performance.
-IDEA fitted-track efficiency and target/truth jet behavior still require the
-larger dataset studies. Rebuild local native libraries and regenerate datasets
-in fresh campaign directories when migrating from the nightly runtime.
+Datasets produced with earlier releases use proxy IDEA tracks or different
+vertex smearing and must be regenerated, not relabelled.
