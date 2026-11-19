@@ -17,12 +17,17 @@ LOCAL_K4RECCALORIMETER=${LOCAL_K4RECCALORIMETER:-${CONFIG_DIR}/k4RecCalorimeter-
 LOCAL_K4GEO=${LOCAL_K4GEO:-${CONFIG_DIR}/k4geo-local}
 LOCAL_K4RECTRACKER=${LOCAL_K4RECTRACKER:-${CONFIG_DIR}/k4RecTracker-local}
 WORKDIR=${WORKDIR:-/scratch/local/${USER}/${SAMPLE}_${SLURM_JOB_ID:-manual}}
-TRACKING_MODEL=${TRACKING_MODEL:-${WORKDIR}/SimpleGatrIDEAv3o1.onnx}
 FULLOUTDIR=${OUTDIR}/${SAMPLE}/root
 LOGDIR=${LOGDIR:-${WORKDIR}/logs}
 
 TUTORIAL_DIR=${CONFIG_DIR}/FCC-config/FCCee/FullSim/IDEA/IDEA_o1_v03
 GEN_DIR=$(cd "${CONFIG_DIR}/.." && pwd)
+# Fetched once by build_all.sh (idea/fetch_tracking_model.sh); jobs never download it.
+TRACKING_MODEL=${TRACKING_MODEL:-${GEN_DIR}/.local/models/SimpleGatrIDEAv3o1.onnx}
+if [[ ${ENABLE_GGTF} == true && ! -s ${TRACKING_MODEL} ]]; then
+    echo "Missing tracking model ${TRACKING_MODEL}; run idea/fetch_tracking_model.sh first" >&2
+    exit 1
+fi
 
 mkdir -p "${FULLOUTDIR}" "${WORKDIR}" "${LOGDIR}"
 
@@ -89,7 +94,7 @@ idea_use_local "${LOCAL_K4RECCALORIMETER}"
     for component in FCC-config k4geo-local k4RecTracker-local k4RecCalorimeter-local; do
         printf '%s=%s\n' "${component}" "$(git -C "${CONFIG_DIR}/${component}" rev-parse HEAD)"
     done
-    sha256sum "${CONFIG_DIR}/run_sim.sh" "${CONFIG_DIR}/setup.sh" "${CONFIG_DIR}/pythia.py"
+    sha256sum "${CONFIG_DIR}/run_sim.sh" "${CONFIG_DIR}/setup.sh"
 } > "${WORKDIR}/software_versions.txt"
 key4hep_write_manifest "${WORKDIR}/framework_versions.txt"
 cat "${WORKDIR}/framework_versions.txt" >> "${WORKDIR}/software_versions.txt"

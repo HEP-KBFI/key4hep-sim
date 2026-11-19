@@ -15,4 +15,5 @@ python -c 'import DDG4; from Configurables import TrackMerger, GGTFTrackFinder, 
 check_dir=$(mktemp -d /tmp/key4hep-runtime-check.XXXXXXXX)
 trap 'rm -rf -- "$check_dir"' EXIT
 python "$root/ild/stage_geometry.py" "$K4GEO" "$check_dir/geometry" --assets "$assets"
+test -s "$root/.local/models/SimpleGatrIDEAv3o1.onnx"
 printf 'Runtime check passed; build identity: %s\n' "$KEY4HEP_BUILD_ID"

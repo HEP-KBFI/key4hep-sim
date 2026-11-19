@@ -6,3 +6,4 @@ bash "${GENERATOR_ROOT}/build_marlintrkprocessors.sh"
 for component in k4geo k4rectracker k4reccalorimeter; do
     bash "${GENERATOR_ROOT}/idea/build_${component}.sh"
 done
+bash "${GENERATOR_ROOT}/idea/fetch_tracking_model.sh"

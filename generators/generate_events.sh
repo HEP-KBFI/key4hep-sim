@@ -6,12 +6,12 @@ sample=${1:?Usage: generate_events.sh SAMPLE SEED EVENTS [fccee|clic]}
 export NUM=${2:?Set random seed}
 export NEV=${3:?Set event count}
 collider=${4:-fccee}
-[[ $sample =~ ^[A-Za-z0-9_]+$ && $NUM =~ ^[0-9]+$ && $NEV =~ ^[1-9][0-9]*$ ]] || {
+[[ $sample =~ ^[A-Za-z0-9_-]+$ && $NUM =~ ^[0-9]+$ && $NEV =~ ^[1-9][0-9]*$ ]] || {
     echo "Invalid sample, seed or event count" >&2; exit 2;
 }
 case $collider in fccee|clic) ;; *) echo "Unknown collider: $collider" >&2; exit 2 ;; esac
 source_card=$root/pythia/$collider/$sample.cmd
-test -r "$source_card"
+[[ -r $source_card ]] || { echo "No $collider card for $sample: $source_card" >&2; exit 2; }
 cp "$source_card" card.cmd
 printf '\nRandom:seed=%s\n' "$NUM" >> card.cmd
 case $sample in
