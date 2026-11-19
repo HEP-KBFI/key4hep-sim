@@ -50,7 +50,11 @@ same native check. Build once on the execution host before submitting jobs.
 
 `build_all.sh` builds the framework, MarlinReco, the patched
 MarlinTrkProcessors refitter, geometry, tracking, and calorimeter reconstruction.
-ILD automatically loads the patched refitter for alternate-mass fits. CLD/CLIC alone need only `build_overlays.sh`. Builds use Ninja,
+ILD automatically loads the patched refitter. Its primary Clupatra refit
+discards failed fits before publishing `MarlinTrkTracks`, so downstream
+mass refits, Pandora and truth linking only see accepted tracks. If the
+refitter patch changes, rerun `build_marlintrkprocessors.sh` in the image.
+CLD/CLIC alone need only `build_overlays.sh`. Builds use Ninja,
 RelWithDebInfo and four workers (`BUILD_JOBS` overrides). Shared installations
 are under `.local/2026-04-08/install/`, separate from old nightly builds.
 A clean shell/container is required: rolling views and mixed releases are

@@ -1,7 +1,11 @@
 # Source after initializing the stable Key4hep environment.
-refitter="${KEY4HEP_LOCAL_ROOT}/install/MarlinTrkProcessors/lib/libMarlinTrkProcessors.so"
-if [[ ! -r $refitter ]]; then
-    echo "Missing patched MarlinTrkProcessors. Run gen/build_all.sh inside the development container." >&2
+refitter_dir="${KEY4HEP_LOCAL_ROOT}/install/MarlinTrkProcessors"
+refitter="${refitter_dir}/lib/libMarlinTrkProcessors.so"
+refitter_patch="$(dirname "${BASH_SOURCE[0]}")/../patches/MarlinTrkProcessors-v02-12-08-missing-refit-seed.patch"
+refitter_patch_sha=$(sha256sum "$refitter_patch" | cut -d ' ' -f 1)
+if [[ ! -r $refitter || ! -r $refitter_dir/.key4hep-refitter-id ]] ||
+   [[ $(cat "$refitter_dir/.key4hep-refitter-id") != "$(printf '%s\n' "$KEY4HEP_BASE_ID" "$refitter_patch_sha")" ]]; then
+    echo "Missing or stale MarlinTrkProcessors overlay. Run gen/build_marlintrkprocessors.sh inside the development container." >&2
     return 1
 fi
 IFS=: read -r -a marlin_plugins <<< "$MARLIN_DLL"

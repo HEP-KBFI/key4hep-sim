@@ -39,6 +39,7 @@ export K4GEO=${WORKDIR}/geometry
 {
     printf 'detector=ILD_FCCee_v02\nstack=%s\nstack_id=%s\nseed=%s\nevents=%s\ncms_energy=%s\n' \
         "${KEY4HEP_STACK}" "${IDEA_STACK_ID}" "${NUM}" "${NEV}" "${CMS_ENERGY}"
+    printf 'marlintrkprocessors_patch_sha256=%s\n' "$refitter_patch_sha"
     for repo in "${ILD_CONFIG_DIR}" "${CONFIG_DIR}/../idea/k4geo-local" "${CONFIG_DIR}/../idea/k4RecTracker-local"; do
         printf '%s=%s\n' "${repo}" "$(git -C "${repo}" rev-parse HEAD)"
         git -C "${repo}" diff | sha256sum

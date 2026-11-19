@@ -1,8 +1,67 @@
+diff --git a/source/Refitting/include/RefitProcessor.h b/source/Refitting/include/RefitProcessor.h
+index 1999d85..cae2876 100644
+--- a/source/Refitting/include/RefitProcessor.h
++++ b/source/Refitting/include/RefitProcessor.h
+@@ -98,6 +98,7 @@ protected:
+   bool _MSOn{};
+   bool _ElossOn{};
+   bool _SmoothOn{};
++  bool _skipFailedFits{};
+ 
+   float _initialTrackError_d0{};
+   float _initialTrackError_phi0{};
 diff --git a/source/Refitting/src/RefitProcessor.cc b/source/Refitting/src/RefitProcessor.cc
-index 394acb2..a01f22f 100644
+index 394acb2..340689f 100644
 --- a/source/Refitting/src/RefitProcessor.cc
 +++ b/source/Refitting/src/RefitProcessor.cc
-@@ -162,6 +162,14 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+@@ -1,6 +1,8 @@
+ #include "RefitProcessor.h"
+ 
+ #include <algorithm>
++#include <cmath>
++#include <memory>
+ 
+ #include <EVENT/LCCollection.h>
+ #include <EVENT/Track.h>
+@@ -33,6 +35,26 @@ using namespace marlin;
+ 
+ using namespace MarlinTrk;
+ 
++namespace {
++bool hasUsableFit(const EVENT::Track& track) {
++  if (track.getNdf() <= 0 || !std::isfinite(track.getChi2()) || track.getChi2() < 0)
++    return false;
++
++  const auto& states = track.getTrackStates();
++  for (const int location : {TrackState::AtIP, TrackState::AtFirstHit, TrackState::AtLastHit}) {
++    if (std::count_if(states.begin(), states.end(),
++                      [location](const auto* state) { return state->getLocation() == location; }) != 1)
++      return false;
++  }
++
++  const auto* ip = track.getTrackState(TrackState::AtIP);
++  const auto* firstHitPosition = track.getTrackState(TrackState::AtFirstHit)->getReferencePoint();
++  return std::isfinite(ip->getD0()) && std::isfinite(ip->getPhi()) && std::isfinite(ip->getOmega()) &&
++         ip->getOmega() != 0 && std::isfinite(ip->getZ0()) && std::isfinite(ip->getTanLambda()) &&
++         std::isfinite(firstHitPosition[0]) && std::isfinite(firstHitPosition[1]);
++}
++} // namespace
++
+ RefitProcessor aRefitProcessor;
+ 
+ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
+@@ -91,6 +113,10 @@ RefitProcessor::RefitProcessor() : Processor("RefitProcessor") {
+   registerProcessorParameter("FitDirection", "Fit direction: -1: backward [default], +1: forward", _fitDirection,
+                              int(-1));
+ 
++  registerProcessorParameter("SkipFailedFits",
++                             "Discard failed fits and tracks without usable IP, first-hit and last-hit states",
++                             _skipFailedFits, bool(false));
++
+   registerProcessorParameter("ParticleMass",
+                              "particle mass that is used in the fit - default is the pion mass: 0.13957018 )", _mass,
+                              double(0.13957018));
+@@ -162,6 +188,14 @@ void RefitProcessor::processEvent(LCEvent* evt) {
      for (int i = 0; i < nTracks; ++i) {
        Track* track_to_refit = dynamic_cast<Track*>(input_track_col->getElementAt(i));
  
@@ -17,7 +76,32 @@ index 394acb2..a01f22f 100644
        EVENT::TrackerHitVec trkHits = track_to_refit->getTrackerHits();
  
        std::vector<std::pair<float, EVENT::TrackerHit*>> r2_values;
-@@ -227,15 +235,7 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+@@ -206,40 +240,36 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+       streamlog_out(DEBUG1) << "TruthTracker::createTrack: fit direction used for fit (-1:backward,+1forward) : "
+                             << _fitDirection << std::endl;
+ 
+-      MarlinTrk::IMarlinTrack* marlinTrk = _trksystem->createTrack();
++      std::unique_ptr<MarlinTrk::IMarlinTrack> marlinTrk(_trksystem->createTrack());
+ 
+       marlinTrk->setMass(_mass);
+ 
+-      TrackImpl* refittedTrack = new TrackImpl;
++      auto refittedTrack = std::make_unique<TrackImpl>();
+ 
+       try {
+         int error = 0;
+ 
+         if (_initialTrackState < 0) { // initialize the track from three hits
+ 
+-          // error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, covMatrix,
+-          // _bField, _maxChi2PerHit);
+-
+           // call with empty pre_fit  -> should use default initialisation of the implementation, e.g.
+           // use an internal pre fit in aidaTT
+-          error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, 0, _bField,
+-                                                      _maxChi2PerHit);
++          error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk.get(), trkHits, refittedTrack.get(), fit_direction, 0,
++                                                      _bField, _maxChi2PerHit);
  
          } else { // use the specified track state
  
@@ -33,4 +117,66 @@ index 394acb2..a01f22f 100644
 +          IMPL::TrackStateImpl pre_fit(*seedState);
            pre_fit.setCovMatrix(covMatrix);
  
-           error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, &pre_fit,
+-          error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk, trkHits, refittedTrack, fit_direction, &pre_fit,
+-                                                      _bField, _maxChi2PerHit);
++          error = MarlinTrk::createFinalisedLCIOTrack(marlinTrk.get(), trkHits, refittedTrack.get(), fit_direction,
++                                                      &pre_fit, _bField, _maxChi2PerHit);
++        }
++
++        if (_skipFailedFits && (error != IMarlinTrack::success || !hasUsableFit(*refittedTrack))) {
++          streamlog_out(WARNING) << "Rejecting failed track refit for run " << evt->getRunNumber() << ", event "
++                                 << evt->getEventNumber() << ", track " << i << " in " << _input_track_col_name
++                                 << ": fit status " << error << ", NDF " << refittedTrack->getNdf() << std::endl;
++          continue;
+         }
+ 
+         if (error != IMarlinTrack::success || refittedTrack->getNdf() < 0) {
+@@ -252,8 +282,6 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+         streamlog_out(ERROR) << "RefitProcessor::processEvent: EVENT: << " << evt->getEventNumber()
+                              << " >> exception caught and rethown. Track = " << track_to_refit << std::endl;
+ 
+-        delete refittedTrack;
+-
+         throw;
+       }
+ 
+@@ -281,7 +309,7 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+ 
+       //      UTIL::BitField64 cellID_encoder( lcio::LCTrackerCellID::encoding_string() ) ;
+ 
+-      MarlinTrk::addHitNumbersToTrack(refittedTrack, all_hits, true, cellID_encoder);
++      MarlinTrk::addHitNumbersToTrack(refittedTrack.get(), all_hits, true, cellID_encoder);
+ 
+       marlinTrk->getOutliers(outliers);
+ 
+@@ -289,9 +317,7 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+         all_hits.push_back(outliers[ihit].first);
+       }
+ 
+-      MarlinTrk::addHitNumbersToTrack(refittedTrack, all_hits, false, cellID_encoder);
+-
+-      delete marlinTrk;
++      MarlinTrk::addHitNumbersToTrack(refittedTrack.get(), all_hits, false, cellID_encoder);
+ 
+       int nhits_in_vxd = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::VXD - 1];
+       int nhits_in_ftd = refittedTrack->subdetectorHitNumbers()[2 * lcio::ILDDetID::FTD - 1];
+@@ -315,17 +341,16 @@ void RefitProcessor::processEvent(LCEvent* evt) {
+       if (nhits_in_set > 0)
+         refittedTrack->setTypeBit(lcio::ILDDetID::SET);
+ 
+-      trackVec->addElement(refittedTrack);
+-
+       // assign the relations previously assigned to the input tracks
+       if (input_track_rels) {
+         const auto& objVec = input_track_rels->getRelatedToObjects(track_to_refit);
+         const auto& weights = input_track_rels->getRelatedToWeights(track_to_refit);
+ 
+         for (unsigned int irel = 0; irel < objVec.size(); ++irel) {
+-          trackRelNav.addRelation(refittedTrack, objVec[irel], weights[irel]);
++          trackRelNav.addRelation(refittedTrack.get(), objVec[irel], weights[irel]);
+         }
+       }
++      trackVec->addElement(refittedTrack.release());
+     }
+ 
+     evt->addCollection(trackVec, _output_track_col_name);
