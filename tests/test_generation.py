@@ -96,8 +96,8 @@ class GenerationContract(unittest.TestCase):
         self.assertEqual((self.work / "events.lhe.gz").read_text(), "LHE mock")
         self.assertIn("set iseed 12345", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
         self.assertIn("set nevents 2", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
-        self.assertIn("set ebeam1 45.5", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
-        self.assertIn("set ebeam2 45.5", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
+        self.assertIn("set ebeam1 45\n", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
+        self.assertIn("set ebeam2 45\n", (self.work / "mg5_bhabha_ecm91.mg5").read_text())
 
     def test_shared_z_cards_generate_at_91gev(self):
         for sample in ("p8_ee_Z_qq_ecm91", "p8_ee_Z_tautau_ecm91"):

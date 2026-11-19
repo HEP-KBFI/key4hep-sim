@@ -128,7 +128,7 @@ apptainer exec --bind /cvmfs,"$PWD",/tmp \
 `BHWIDE_PATH` can select an existing executable. MadGraph requires `mg5_aMC`
 and `envsubst`; `MG5_TEMPLATE_DIR` (or main's `SIMDIR/mg5`) selects templates.
 These background interfaces are separate from the three-sample FCC-ee dataset
-qualification. The MadGraph template uses 45.5 GeV per beam for 91 GeV collisions.
+qualification. The MadGraph template uses 45 GeV per beam for 91 GeV collisions.
 Its adapter is regression-tested; native MadGraph event generation has not
 been qualified in this update. BHWIDE compiled and generated three events
 through the shared Pythia interface.

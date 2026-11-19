@@ -15,7 +15,7 @@ CLD, CLIC, IDEA and ILD. The planned tag is `v1.4.0`; it has not been created.
   joint 50k-event campaign; ILD reconstruction uses the matching beam energy.
 - FCC-ee 2025 beam spot comes from Pythia alone; no additional vertex smear.
 - Main's CLD BHWIDE/MadGraph background adapters are retained. The 91 GeV
-  MadGraph template now sets each beam to 45.5 GeV.
+  MadGraph template keeps 45 GeV per beam.
 - Standalone build and runtime checks, source/build identity validation,
   card hashes in software manifests, and isolated job work directories.
 - Apache-2.0 license for repository-owned code; dependency terms remain
