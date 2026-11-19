@@ -6,20 +6,24 @@
 set -e
 set -x
 
-env
 df -h
 
+export GENERATOR_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 export NEV=${NEV:-100}
 export SAMPLE=$1 #main card
 export NUM=$2 #random seed
+case "${SAMPLE}" in
+    p8_ee_Z_qq_ecm91|p8_ee_Z_tautau_ecm91) COLLIDER=fccee ;;
+    *) COLLIDER=clic ;;
+esac
 
 #Change these as needed
-export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/key4hep_2026-04-08_CLIC_o3_v14/}
-export CONFIG_DIR=${CONFIG_DIR:-/home/joosep/particleflow/mlpf/data/key4hep/gen/clic}
+export OUTDIR=${OUTDIR:-/local/joosep/clic_edm4hep/v1.4.0/}
+export CONFIG_DIR=${CONFIG_DIR:-${GENERATOR_ROOT}/clic}
 export WORKDIR=${WORKDIR:-/scratch/local/$USER/${SAMPLE}_${SLURM_JOB_ID}}
 export FULLOUTDIR=${OUTDIR}/${SAMPLE}
 
-mkdir -p $FULLOUTDIR
+mkdir -p "$FULLOUTDIR/root"
 
 mkdir -p $WORKDIR
 
@@ -34,24 +38,21 @@ trap cleanup EXIT
 
 cd $WORKDIR
 
-cp $CONFIG_DIR/pythia/${SAMPLE}.cmd card.cmd
-cp -R $CONFIG_DIR ./
-
-#add seed to pythia card
-echo "Random:seed=${NUM}" >> card.cmd
-cat card.cmd
+cp -R "$CONFIG_DIR" ./
 
 #prepare the gen-sim-reco script
 echo "
 #!/bin/bash
 set -e
-source /cvmfs/sw.hsf.org/key4hep/setup.sh -r 2026-04-08
-env
+source '${GENERATOR_ROOT}/setup.sh'
+source '${GENERATOR_ROOT}/stage_logging.sh'
+key4hep_write_manifest software.txt
 ls `pwd`
-k4run ./clic/pythia.py -n $NEV --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard card.cmd
-ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
+run_stage generation bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' '${COLLIDER}'
+cat generation.software.txt >> software.txt
+run_stage simulation ddsim -I out.hepmc -N -1 -O out_SIM.root --random.enableEventSeed --random.seed ${NUM} --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
 cd clic/CLICPerformance/clicConfig
-k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1
+run_stage reconstruction k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1
 " > sim.sh
 
 cat sim.sh
@@ -63,4 +64,7 @@ bash sim.sh
 ls *.root
 
 #Copy the outputs
-cp out_RECO.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
+output="$FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root"
+cp out_RECO.root "$output.partial"
+mv "$output.partial" "$output"
+cp software.txt "${output%.root}.software.txt"

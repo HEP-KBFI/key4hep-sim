@@ -1,63 +1,72 @@
-# IDEA event generation
+# IDEA
 
-This directory runs the official `IDEA_o1_v03` full-simulation,
-digitization, and reconstruction workflow from the pinned `FCC-config`
-submodule. The detector XML and plugins are supplied by the `K4GEO`
-installation in the Key4HEP nightly environment.
+`run_sim.sh SAMPLE SEED` generates, simulates, digitizes and reconstructs
+`IDEA_o1_v03` events with the pinned FCC-config steering and local patches:
 
-From the repository root on the Tallinn site:
+| Component | Branch `idea-upstream-2026-11` | Local changes |
+|---|---|---|
+| FCC-config | fork of `955329110fe0dd51003f01d5e63176ed282c537d` | Fast optical transport; readout truth links and named channel energies |
+| k4geo | fork of `4013b50b4b951f6ec0ebff1c941ce02be0df4a2c` | Cherenkov-photon counts kept per charged parent in hit contributions |
+| k4RecCalorimeter | fork of `f0085b42a0461fb780c1fb8818f24d3e7463060c` | Optical digi-to-sim links, merged cell IDs, channel-energy metadata, energy-weighted truth |
+| k4RecTracker | fork of `c1cceda0c74f62e1451b2a41282ca9e23fa88bfd` | Circle-seed orientation from the ordered hit path; GENFIT's fitted charge in the output; EDM4hep 1.0 TrackState lookup |
 
-```bash
-git submodule update --init --recursive
-pixi run -m configs/tallinn/pixi.toml gen_idea
-```
+Build everything with the [shared instructions](../README.md); `build_all.sh`
+also downloads the GGTF model `SimpleGatrIDEAv3o1.onnx` into `.local/models/`.
 
-To restrict or batch the Snakemake jobs, set the same variables accepted by
-the generic `gen` task, for example `BATCH=1/10` or `CORES=4`.
+## Options
 
-The `gun_e_10gev` sample is a one-event, 10 GeV electron-gun validation. Any
-process name beginning with `gun_` selects the DD4hep particle gun instead of
-Pythia. For local tests, its settings can be overridden with
-`GUN_PARTICLE`, `GUN_ENERGY`, and `GUN_DISTRIBUTION`:
+| Variable | Default | Meaning |
+|---|---|---|
+| `ENABLE_GGTF` | `true` | Run GGTF track finding and GenFit fitting (`FittedTracks`). `false` keeps only the truth-seeded proxy tracks, for diagnostics. |
+| `TRACKING_MODEL` | `.local/models/SimpleGatrIDEAv3o1.onnx` | GGTF ONNX model; the job refuses to start without it. |
+| `PROGRESS_INTERVAL` | off | Seconds between progress lines with CPU, memory and I/O of the running stage. |
+| `LOGDIR` | `WORKDIR/logs` | Stage log directory. |
+| `GUN_PARTICLE`, `GUN_ENERGY`, `GUN_DISTRIBUTION` | by sample, `10*GeV`, `uniform` | Particle-gun settings for `gun_*` samples. |
 
-```bash
-NEV=1 GUN_PARTICLE=pi- GUN_ENERGY='5*GeV' \
-OUTDIR=/tmp/idea-gun/output WORKDIR=/tmp/idea-gun/work \
-bash mlpf/data/key4hep/gen/idea/run_sim.sh gun_pi_5gev 424242
-```
-
-Stage logs are written to `${WORKDIR}/logs/generation.log` (for Pythia
-samples), `${WORKDIR}/logs/simulation.log`, and
-`${WORKDIR}/logs/reconstruction.log`. The progress heartbeat is included in
-these files. Set `LOGDIR` to put them elsewhere.
-
-IDEA uses local builds of k4geo and k4RecCalorimeter. The k4geo patch retains
-detected Cherenkov-photon counts grouped by their charged Geant4 parent and
-writes them as `SimCalorimeterHitContribution`s. The optical SiPM digitizer
-then writes digi-hit to sim-hit links, allowing `CreateTruthLinks` to combine
-scintillation and Cherenkov truth contributions. Build the local packages
-with:
+Example smoke test from a particleflow checkout:
 
 ```bash
-bash mlpf/data/key4hep/gen/idea/build_k4geo.sh
-bash mlpf/data/key4hep/gen/idea/build_k4reccalorimeter.sh
+apptainer exec --bind /cvmfs,"$PWD",/tmp --env LD_PRELOAD=/usr/lib64/libffi.so.8 \
+  mlpf/data/key4hep/gen/idea/idea-dev.sif \
+  env NEV=1 OUTDIR=/tmp/idea-smoke/output WORKDIR=/tmp/idea-smoke/work PROGRESS_INTERVAL=60 \
+  bash mlpf/data/key4hep/gen/idea/run_sim.sh gun_e_10gev 424242
 ```
 
-`run_sim.sh` activates both installations and fails early with the relevant
-build instruction if either is missing. Existing simulation files must be
-regenerated: older `DRcaloSiPMreadoutSimHit` collections contain no Cherenkov
-MC-particle contributions.
+## Output
 
-The final files follow the common Key4HEP layout:
+The reconstruction writes fitted `FittedTracks` (with original hit references,
+used by MLPF) and `FittedTracksWithFilteredHits`, the proxy
+`TracksFromGenParticles` with its truth association, dual-readout
+`TopoClusterAll` clusters with cell and MC-particle links, and the optical
+digi-to-sim links. Clusters carry the raw Cherenkov plus scintillation energy
+with the two channel sums as shape parameters. The manifest records the stack,
+component commits, generator cards and the tracking model checksum.
 
-```text
-${workspace_dir}/gen/${process_name}/root/reco_${process_name}_${seed}.root
+MLPF postprocessing selects `FittedTracks` at the interaction point and
+derives training labels from tracker-hit truth links; see
+`docs/datasets/idea.md` in particleflow. Proxy-only outputs need
+`--idea-track-source truth_seeded` there and are not interchangeable with
+fitted data.
+
+## Checks
+
+`tests/check_truth_links.py WORKDIR` runs the installed `CreateTruthLinks`
+plugin on synthetic dual-readout cells (copied cells, shared cell IDs, unequal
+channel energies, missing truth, empty cells). `tests/check_reco.py FILE`
+verifies collection presence, fitted-track quality, channel and cluster energy
+closure and truth-weight closure on a reconstructed file; add
+`--require-fitted-tracks` for events that must contain fitted tracks, or
+`--proxy-only` for `ENABLE_GGTF=false` output. Run both inside the IDEA
+environment:
+
+```bash
+source idea/setup.sh
+for p in k4geo k4RecTracker k4RecCalorimeter; do idea_use_local "idea/$p-local"; done
+python idea/tests/check_truth_links.py /tmp/idea-truth-check
+python idea/tests/check_reco.py /tmp/idea-smoke/output/gun_e_10gev/root/reco_gun_e_10gev_424242.root
 ```
 
-The current MLPF integration is a pipeline-validation path, not a physics
-reconstruction baseline. It consumes truth-seeded
-`TracksFromGenParticles`, dual-readout topoclusters, and their truth
-associations. GGTF pattern recognition is disabled in normal production
-because its tracks are not consumed; set `ENABLE_GGTF=1` for dedicated
-tracking studies. The IDEA tutorial still does not produce reconstructed
-particle-flow objects.
+Successful execution does not establish tracking efficiency or particle-flow
+performance; validate the model and the clustering on representative samples
+before physics use. The September 2025 status summary is kept in
+`docs/IDEA_particle_flow_status.md` for reference.
