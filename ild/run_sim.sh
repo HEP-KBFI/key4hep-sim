@@ -12,7 +12,7 @@ case "${SAMPLE}" in
 esac
 CMS_ENERGY=${CMS_ENERGY:-${sample_energy}}
 OUTDIR=${OUTDIR:?Set OUTDIR to the production gen directory}
-WORKDIR=${WORKDIR:?Set an empty WORKDIR; intermediate files are retained}
+WORKDIR=${WORKDIR:?Set an empty WORKDIR}
 mkdir -p "${WORKDIR}" "${OUTDIR}/${SAMPLE}/root"
 WORKDIR=$(realpath "${WORKDIR}")
 OUTDIR=$(realpath "${OUTDIR}")
@@ -33,7 +33,15 @@ git -C "${ILD_CONFIG_DIR}" diff --exit-code HEAD -- .
 cd "${WORKDIR}"
 export LOGDIR=${LOGDIR:-${WORKDIR}}
 source "${CONFIG_DIR}/../stage_logging.sh"
-trap 'status=$?; if (( status != 0 )); then echo "ILD job failed (${status}); logs retained in ${LOGDIR}" >&2; fi' EXIT
+# Production scratch is disposable after publishing; other work directories keep their evidence.
+cleanup() {
+    local status=$?
+    if (( status != 0 )); then
+        echo "ILD job failed (${status}); logs are in ${LOGDIR}" >&2
+    fi
+    case "${WORKDIR}" in /scratch/local/${USER}/*) rm -rf -- "${WORKDIR}" ;; esac
+}
+trap cleanup EXIT
 python "${recipe_dir}/stage_geometry.py" "${K4GEO}" "${WORKDIR}/geometry" --assets "${geometry_assets}"
 export K4GEO=${WORKDIR}/geometry
 {
@@ -52,7 +60,7 @@ cat framework_versions.txt >> software.txt
 sim_args=(--compactFile "${K4GEO}/FCCee/ILD_FCCee/compact/ILD_FCCee_v02/ILD_FCCee_v02.xml"
     --steeringFile "${ILD_CONFIG_DIR}/StandardConfig/production/ddsim_steer.py"
     --outputFile "${WORKDIR}/sim.edm4hep.root" --numberOfEvents "${NEV}"
-    --random.enableEventSeed --random.seed "${NUM}" --crossingAngleBoost 0)
+    --random.enableEventSeed --random.seed "${NUM}")
 reco_args=(--detectorModel ILD_FCCee_v02 --inputFiles "${WORKDIR}/sim.edm4hep.root"
     --outputFileBase "${WORKDIR}/reco" --cmsEnergy "${CMS_ENERGY}"
     --noAIDA --noPFO --noBeamCalReco -n "${NEV}")
@@ -65,7 +73,7 @@ if [[ ${SAMPLE} == gun_* ]]; then
         gun_kaon0L_*) particle=kaon0L ;;
         *) echo "Unknown particle-gun sample: ${SAMPLE}" >&2; exit 1 ;;
     esac
-    sim_args+=(--enableGun --gun.particle "${GUN_PARTICLE:-${particle}}"
+    sim_args+=(--enableGun --gun.particle "${GUN_PARTICLE:-${particle}}" --crossingAngleBoost 0.0
         --gun.energy "${GUN_ENERGY:-10*GeV}" --gun.distribution "${GUN_DISTRIBUTION:-uniform}")
     if [[ -n ${GUN_THETA_MIN:-} ]]; then
         sim_args+=(--gun.thetaMin "${GUN_THETA_MIN}")
@@ -95,4 +103,4 @@ output=${OUTDIR}/${SAMPLE}/root/reco_${SAMPLE}_${NUM}.root
 test -s reco_REC.edm4hep.root
 cp reco_REC.edm4hep.root "${output}.partial"
 mv "${output}.partial" "${output}"
-cp software.txt "${output}.software.txt"
+cp software.txt "${output%.root}.software.txt"

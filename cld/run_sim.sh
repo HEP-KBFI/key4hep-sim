@@ -35,15 +35,14 @@ key4hep_write_manifest software.txt
 cp -R "$CONFIG_DIR" CLDConfig
 export PYTHONPATH="$PWD/CLDConfig/CLDConfig:${PYTHONPATH:-}"
 sim_args=(--outputFile out_SIM.root --compactFile "$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml"
-    --steeringFile CLDConfig/CLDConfig/cld_steer.py)
+    --steeringFile CLDConfig/CLDConfig/cld_steer.py --random.enableEventSeed --random.seed "$NUM")
 if [[ $SAMPLE == gun_* ]]; then
     case $SAMPLE in
         gun_e_*) particle=e- ;; gun_mu_*) particle=mu- ;; gun_pi_*) particle=pi- ;;
         *) echo "Unsupported CLD gun: $SAMPLE" >&2; exit 1 ;;
     esac
     sim_args+=(--enableGun --gun.distribution "${GUN_DISTRIBUTION:-uniform}" --gun.energy "${GUN_ENERGY:-10*GeV}"
-        --gun.particle "${GUN_PARTICLE:-$particle}" --crossingAngleBoost 0.0
-        --random.enableEventSeed --random.seed "$NUM" --numberOfEvents "$NEV")
+        --gun.particle "${GUN_PARTICLE:-$particle}" --crossingAngleBoost 0.0 --numberOfEvents "$NEV")
 else
     run_stage generation bash "$GENERATOR_ROOT/generators/generate_events.sh" "$SAMPLE" "$NUM" "$NEV" fccee
     cat generation.software.txt >> software.txt

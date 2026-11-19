@@ -50,7 +50,7 @@ key4hep_write_manifest software.txt
 ls `pwd`
 run_stage generation bash '${GENERATOR_ROOT}/generators/generate_events.sh' '${SAMPLE}' '${NUM}' '${NEV}' '${COLLIDER}'
 cat generation.software.txt >> software.txt
-run_stage simulation ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
+run_stage simulation ddsim -I out.hepmc -N -1 -O out_SIM.root --random.enableEventSeed --random.seed ${NUM} --compactFile \$K4GEO/CLIC/compact/CLIC_o3_v14/CLIC_o3_v14.xml --steeringFile clic/CLICPerformance/clicConfig/clic_steer.py
 cd clic/CLICPerformance/clicConfig
 run_stage reconstruction k4run $WORKDIR/clic/clicRec_e4h_input.py --gaudi-input $WORKDIR/out_SIM.root --gaudi-output $WORKDIR/out_RECO.root --num-events -1
 " > sim.sh
@@ -64,6 +64,7 @@ bash sim.sh
 ls *.root
 
 #Copy the outputs
-cp out_RECO.root $FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root
-
-cp software.txt "$FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.software.txt"
+output="$FULLOUTDIR/root/reco_${SAMPLE}_${NUM}.root"
+cp out_RECO.root "$output.partial"
+mv "$output.partial" "$output"
+cp software.txt "${output%.root}.software.txt"

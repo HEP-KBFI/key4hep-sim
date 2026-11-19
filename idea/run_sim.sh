@@ -139,5 +139,7 @@ if [[ -f ${TRACKING_MODEL} ]]; then
 fi
 
 test -s IDEA_sim_digi_reco.root
-cp IDEA_sim_digi_reco.root "${FULLOUTDIR}/reco_${SAMPLE}_${NUM}.root"
-cp software_versions.txt "${FULLOUTDIR}/reco_${SAMPLE}_${NUM}.software.txt"
+output="${FULLOUTDIR}/reco_${SAMPLE}_${NUM}.root"
+cp IDEA_sim_digi_reco.root "${output}.partial"
+mv "${output}.partial" "${output}"
+cp software_versions.txt "${output%.root}.software.txt"
