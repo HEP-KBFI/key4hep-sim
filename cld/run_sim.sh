@@ -1,118 +1,59 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #SBATCH -p main
 #SBATCH --mem-per-cpu=6G
 #SBATCH --cpus-per-task=1
 #SBATCH -o logs/slurm-%x-%j-%N.out
-set -e
-set -x
-
-env
-df -h
-
-export NEV=${NEV:-100}
-export SAMPLE=$1 #main card
-export NUM=$2 #random seed
-
-#Change these as needed
-export KEY4HEP_VERSION=${KEY4HEP_VERSION:-2026-04-08}
-export OUTDIR=${OUTDIR:-/local/${USER}/cld_edm4hep/v1.3.0_key4hep_${KEY4HEP_VERSION}/}
-export CONFIG_DIR=${CONFIG_DIR:-/home/${USER}/key4hep-sim/cld/CLDConfig}
-export SIMDIR=${SIMDIR:-${CONFIG_DIR}}
-export BHWIDE_PATH="${BHWIDE_PATH:-$(command -v bhwide || printf '%s' "/home/${USER}/key4hep-sim/generators/bhwide/bin/bhwide")}"
-export WORKDIR=${WORKDIR:-/scratch/local/${USER}/${SAMPLE}_${SLURM_JOB_ID:-manual}}
-export FULLOUTDIR=${OUTDIR}/${SAMPLE}/root
-
-mkdir -p "${FULLOUTDIR}"
-
-mkdir -p "${WORKDIR}"
-
-# Ensure cleanup on exit, even if the job fails
+set -euo pipefail
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export GENERATOR_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+# Preserve main's optional container entry point, using the qualified dev image.
+if [[ ${RUN_SIM_IN_SINGULARITY:-0} == 1 ]]; then
+    export RUN_SIM_IN_SINGULARITY=0
+    exec apptainer exec --bind "/cvmfs,$GENERATOR_ROOT,/tmp,${OUTDIR:?Set OUTDIR},${WORKDIR:?Set WORKDIR}" \
+        --env LD_PRELOAD=/usr/lib64/libffi.so.8 "$GENERATOR_ROOT/idea/idea-dev.sif" \
+        bash "$SCRIPT_DIR/run_sim.sh" "$@"
+fi
+NEV=${NEV:-100}
+SAMPLE=${1:?Usage: run_sim.sh SAMPLE SEED}
+NUM=${2:?Set random seed}
+CONFIG_DIR=${CONFIG_DIR:-${GENERATOR_ROOT}/cld/CLDConfig}
+OUTDIR=${OUTDIR:?Set OUTDIR}
+WORKDIR=${WORKDIR:?Set an empty WORKDIR}
+mkdir -p "$OUTDIR/$SAMPLE/root" "$WORKDIR"
+OUTDIR=$(realpath "$OUTDIR")
+WORKDIR=$(realpath "$WORKDIR")
+[[ -z $(ls -A "$WORKDIR") ]] || { echo "WORKDIR must be empty: $WORKDIR" >&2; exit 1; }
+cd "$WORKDIR"
+# Retain manual-run evidence; production scratch is disposable after publishing.
 cleanup() {
-    if [ ! -z "$WORKDIR" ] && [ "$WORKDIR" != "/scratch/local/$USER" ] && [ "$WORKDIR" != "/scratch/local/$USER/" ]; then
-        echo "Cleaning up scratch directory $WORKDIR"
-        rm -Rf $WORKDIR
-    fi
+    case "$WORKDIR" in /scratch/local/${USER}/*) rm -rf -- "$WORKDIR" ;; esac
 }
 trap cleanup EXIT
-
-cd "${WORKDIR}"
-
-PYTHIA_CARD=card.cmd
-cp "${CONFIG_DIR}/pythia/${SAMPLE}.cmd" "${PYTHIA_CARD}"
-cp -R "${CONFIG_DIR}" ./
-
-#generate LHE events if requested so
-GEN_SCRIPT=gen.sh
-if [[ ${SAMPLE} == bhwide* ]]; then
-    LHE_EVENTS=$(pwd)/events.lhe
-    cat >> "${PYTHIA_CARD}" <<EOF
-Beams:LHEF = ${LHE_EVENTS}
-Main:numberOfEvents = ${NEV}
-EOF
-    cat > "${GEN_SCRIPT}" <<EOF
-#!/bin/bash
-set -e
-if ! source /cvmfs/sw.hsf.org/key4hep/setup.sh -r ${KEY4HEP_VERSION}; then
-    echo "Key4HEP setup failed; the script is going to abort."
-    exit 1
-fi
-cp "${BHWIDE_PATH}" .
-./$(basename "${BHWIDE_PATH}") --events ${NEV} --seed ${NUM} --lhe ${LHE_EVENTS}
-EOF
-    bash "${GEN_SCRIPT}"
-elif [[ ${SAMPLE} == mg5* ]]; then
-    LHE_EVENTS=$(pwd)/events.lhe.gz
-    cat >> "${PYTHIA_CARD}" <<EOF
-Beams:LHEF = ${LHE_EVENTS}
-Main:numberOfEvents = ${NEV}
-EOF
-    cat > "${GEN_SCRIPT}" <<EOF
-#!/bin/bash
-set -e
-if ! source /cvmfs/sw.hsf.org/key4hep/setup.sh -r ${KEY4HEP_VERSION}; then
-    echo "Key4HEP setup failed; the script is going to abort."
-    exit 1
-fi
-envsubst < ${SIMDIR}/mg5/${SAMPLE}.template > ${SAMPLE}.mg5
-mg5_aMC ${SAMPLE}.mg5
-ln -s ${SAMPLE}/Events/${SAMPLE}_seed${NUM}/unweighted_events.lhe.gz ${LHE_EVENTS}
-EOF
-    bash "${GEN_SCRIPT}"
-fi
-
-#add seed to pythia card
-echo "Random:seed=${NUM}" >> "${PYTHIA_CARD}"
-cat "${PYTHIA_CARD}"
-
-#prepare the gen-sim-reco script
-SIM_SCRIPT=sim.sh
-cat > "${SIM_SCRIPT}" <<EOF
-#!/bin/bash
-set -e
-if ! source /cvmfs/sw.hsf.org/key4hep/setup.sh -r ${KEY4HEP_VERSION}; then
-    echo "Key4HEP setup failed; the script is going to abort."
-    exit 1
-fi
-env
-ls `pwd`/CLDConfig/CLDConfig
-k4run CLDConfig/pythia.py -n ${NEV} --Dumper.Filename out.hepmc --Pythia8.PythiaInterface.pythiacard ${PYTHIA_CARD}
-ddsim -I out.hepmc -N -1 -O out_SIM.root --compactFile \$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml --steeringFile CLDConfig/CLDConfig/cld_steer.py
-
-cd CLDConfig/CLDConfig
-k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
-EOF
-
-cat "${SIM_SCRIPT}"
-
-#execute the gen-sim-reco step
-export PYTHONPATH=$(pwd)/CLDConfig/CLDConfig:$PYTHONPATH
-if [[ ${RUN_SIM_IN_SINGULARITY:-0} == 1 ]]; then
-    singularity exec -B "/home/${USER}" -B /cvmfs -B /scratch -B /local --env "PYTHONPATH=$(pwd)/CLDConfig/CLDConfig" /home/software/singularity/alma9.simg bash "${SIM_SCRIPT}"
+source "$GENERATOR_ROOT/setup.sh"
+source "$GENERATOR_ROOT/stage_logging.sh"
+key4hep_write_manifest software.txt
+cp -R "$CONFIG_DIR" CLDConfig
+export PYTHONPATH="$PWD/CLDConfig/CLDConfig:${PYTHONPATH:-}"
+sim_args=(--outputFile out_SIM.root --compactFile "$K4GEO/FCCee/CLD/compact/CLD_o2_v07/CLD_o2_v07.xml"
+    --steeringFile CLDConfig/CLDConfig/cld_steer.py --random.enableEventSeed --random.seed "$NUM")
+if [[ $SAMPLE == gun_* ]]; then
+    case $SAMPLE in
+        gun_e_*) particle=e- ;; gun_mu_*) particle=mu- ;; gun_pi_*) particle=pi- ;;
+        *) echo "Unsupported CLD gun: $SAMPLE" >&2; exit 1 ;;
+    esac
+    sim_args+=(--enableGun --gun.distribution "${GUN_DISTRIBUTION:-uniform}" --gun.energy "${GUN_ENERGY:-10*GeV}"
+        --gun.particle "${GUN_PARTICLE:-$particle}" --crossingAngleBoost 0.0 --numberOfEvents "$NEV")
 else
-    bash "${SIM_SCRIPT}"
+    run_stage generation bash "$GENERATOR_ROOT/generators/generate_events.sh" "$SAMPLE" "$NUM" "$NEV" fccee
+    cat generation.software.txt >> software.txt
+    sim_args+=(--inputFiles out.hepmc --numberOfEvents "$NEV")
 fi
-
-ls *.root
-
-#Copy the outputs
-cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root "${FULLOUTDIR}/reco_${SAMPLE}_${NUM}.root"
+run_stage simulation ddsim "${sim_args[@]}"
+(
+    cd CLDConfig/CLDConfig
+    run_stage reconstruction k4run CLDReconstruction.py --inputFiles ../../out_SIM.root --outputBasename out_RECO --num-events -1
+)
+output="$OUTDIR/$SAMPLE/root/reco_${SAMPLE}_${NUM}.root"
+cp CLDConfig/CLDConfig/out_RECO_REC.edm4hep.root "$output.partial"
+mv "$output.partial" "$output"
+cp software.txt "${output%.root}.software.txt"

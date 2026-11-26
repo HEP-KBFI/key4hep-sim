@@ -14,6 +14,18 @@
 [submodule "idea/k4RecCalorimeter-local"]
 	path = idea/k4RecCalorimeter-local
 	url = https://github.com/HEP-KBFI/k4RecCalorimeter.git
+[submodule "idea/k4RecTracker-local"]
+	path = idea/k4RecTracker-local
+	url = https://github.com/HEP-KBFI/k4RecTracker.git
+[submodule "ild/ILDConfig"]
+	path = ild/ILDConfig
+	url = https://github.com/iLCSoft/ILDConfig.git
+[submodule "k4FWCore"]
+	path = k4FWCore
+	url = https://github.com/key4hep/k4FWCore.git
+[submodule "MarlinReco"]
+	path = MarlinReco
+	url = https://github.com/iLCSoft/MarlinReco.git
 [submodule "generators/bhwide"]
 	path = generators/bhwide
 	url = https://github.com/HEP-KBFI/BHWIDE.git

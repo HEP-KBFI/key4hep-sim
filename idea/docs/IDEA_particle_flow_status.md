@@ -1,4 +1,8 @@
-# Current state of particle-flow reconstruction for IDEA
+# Particle-flow reconstruction for IDEA: September 2025 snapshot
+
+This is a historical summary. The November 2026 source update adds realistic
+GGTF/GenFit tracking and option-2 clustering; see the [current generator
+instructions](../README.md) for the implemented pipeline and its limitations.
 
 Source: Sanghyun Ko, *Pandora (reconstruction) experience with the IDEA
 detector*, Particle Flow Reconstruction Workshop, 2 September 2025

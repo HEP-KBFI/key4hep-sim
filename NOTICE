@@ -1,0 +1,13 @@
+key4hep-sim
+Copyright key4hep-sim contributors.
+
+Repository-owned code is licensed under Apache License 2.0 (see LICENSE).
+Git submodules are separate works and retain their upstream copyright and
+license terms; this license does not relicense them or the external Key4hep
+software stack. Source files and cards retain their attribution notices.
+
+The FCC-ee cards are supplied by the pinned jpata/CLDConfig submodule and
+include material adapted from HEP-FCC/FCC-config under Apache License 2.0.
+The CLIC cards retain their FCC-config attribution in each source file.
+BHWIDE is an optional external generator by S. Jadach, W. Placzek and
+B.F.L. Ward; consult its source distribution for its terms and citations.
