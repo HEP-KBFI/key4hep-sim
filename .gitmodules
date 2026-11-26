@@ -28,5 +28,5 @@
 	url = https://github.com/iLCSoft/MarlinReco.git
 [submodule "generators/bhwide"]
 	path = generators/bhwide
-	url = https://github.com/ktht/bhwide.git
-	branch = master-cli
+	url = https://github.com/HEP-KBFI/BHWIDE.git
+	branch = main-cli
